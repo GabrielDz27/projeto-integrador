@@ -1,9 +1,8 @@
 package ifsc.pi.scm.models.usuario;
 
-import com.godev.team_up.models.usuario.dtos.CreateUsuarioRequest;
-import com.godev.team_up.models.usuario.dtos.UpdateUsuarioRequest;
+import ifsc.pi.scm.models.usuario.dtos.CreateUsuarioRequest;
+import ifsc.pi.scm.models.usuario.dtos.UpdateUsuarioRequest;
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
 import lombok.*;
 
 @Entity

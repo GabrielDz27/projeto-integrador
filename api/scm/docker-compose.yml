@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  spring_db:
+    container_name: spring_db
+    image: postgres:12
+    env_file:
+      - .env
+    environment:
+      POSTGRES_PASSWORD: ${PSQLDB_PASSWORD}
+      POSTGRES_USER: ${PSQLDB_USERNAME}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata: {}
