@@ -1,0 +1,55 @@
+<app-partida-modal [open]="createOpen()" (openChange)="createOpen.set($event)" mode="create"
+                   (saved)="onSaved()"></app-partida-modal>
+<header class="header-fixed">
+  <div class="max-w-7xl mx-auto px-5 flex items-center gap-10">
+    <div class="flex items-center">
+      <span class="text-3xl font-bold text-gray-800">Team</span>
+      <span class="text-3xl font-bold text-sky-700">Up !</span>
+    </div>
+
+    <nav class="flex items-center gap-4">
+      <a routerLink="/inicio" class="text-gray-600 text-sm hover:text-blue-600 flex items-center gap-2">
+        <lucide-icon [img]="HomeIcon" class="my-icon size-5">home</lucide-icon>
+        Início
+      </a>
+      <a routerLink="/minhas-partidas" class="text-gray-600 text-sm hover:text-blue-600 flex items-center gap-2">
+        <lucide-icon [img]="ClipBoardIcon" class="my-icon size-5"></lucide-icon>
+        Minhas Partidas
+      </a>
+      <a routerLink="/solicitacoes" class="text-gray-600 text-sm hover:text-blue-600 flex items-center gap-2">
+        <lucide-icon [img]="MailsIcon" class="my-icon size-5">list</lucide-icon>
+        Solicitações
+      </a>
+      <a routerLink="/avaliacoes" class="text-gray-600 text-sm hover:text-blue-600 flex items-center gap-2">
+        <lucide-icon [img]="BadgeCheck" class="my-icon size-5">list</lucide-icon>
+        Avaliações
+      </a>
+    </nav>
+
+    <div class="flex items-center gap-5 ml-auto ">
+      <app-button variant="primary" (click)="aoCriarPartida()">+ Criar Partida</app-button>
+
+      <div class="relative" #userMenu>
+        <button type="button" class="user-menu-trigger flex items-center gap-2 cursor-pointer"
+                (click)="toggleUserMenu($event)" aria-haspopup="true" [attr.aria-expanded]="userMenuOpen()">
+          @if (session.perfil()?.avatarUrl == null) {
+            <div class="bg-sky-700 text-white w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold">
+              {{ session.userInitials() }}
+            </div>
+          } @else {
+            <app-avatar-usuario [src]="session.perfil()?.avatarUrl" [name]="session.userName()" size="sm"></app-avatar-usuario>
+          }
+
+          <span class="text-gray-800 text-sm">{{ session.userName() }}</span>
+        </button>
+
+        @if (userMenuOpen()) {
+          <div class="user-menu">
+            <a routerLink="/meu-perfil" class="user-menu-item" (click)="closeUserMenu()">Meu perfil</a>
+            <button type="button" class="user-menu-item danger" (click)="onLogout()">Logout</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</header>

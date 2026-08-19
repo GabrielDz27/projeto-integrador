@@ -1,0 +1,194 @@
+<app-partida-modal
+  [open]="createOpen()"
+  (openChange)="createOpen.set($event)"
+  mode="create"
+  (saved)="onSaved()"
+></app-partida-modal>
+
+<app-solicitacao-modal
+  [open]="solicitacaoOpen()"
+  (openChange)="solicitacaoOpen.set($event)"
+  mode="create"
+  [partidaId]="solicitacaoPartidaId()"
+  (saved)="onSolicitacaoSaved()"
+></app-solicitacao-modal>
+
+@if (detalhesOpen() && detalhes()) {
+  <app-partida-detalhes-modal
+    [open]="detalhesOpen()"
+    (openChange)="onDetalhesOpenChange($event)"
+    [partida]="detalhes()!">
+  </app-partida-detalhes-modal>
+}
+
+<div class="min-h-screen bg-slate-50 text-slate-800">
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+    <!-- Topo -->
+    <section class="mb-6">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 class="text-3xl font-extrabold text-slate-900">
+            Bem-vindo de volta, {{session.userName()}}!
+          </h1>
+          <p class="mt-1 text-slate-600">
+            Confira as partidas disponíveis e suas estatísticas
+          </p>
+        </div>
+
+        <app-button variant="primary" (click)="aoCriarPartida()" class="mt-4 sm:mt-0">
+          <span class="inline-flex items-center gap-2">
+            <!--<lucide-icon class="size-4" [img]="PlusIcon"></lucide-icon>-->
+            + Criar Partida
+          </span>
+        </app-button>
+      </div>
+    </section>
+
+    <!-- Stats cards -->
+    <section class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <app-insights-usuario-card
+        titulo="PARTIDAS JOGADAS"
+        [valor]="stats()?.partidasJogadas ?? 0"
+        [detalhe]="stats()?.comparacaoPartidasJogadasPorMes"
+        [icon]="TrophyIcon"
+        tone="sky"
+      ></app-insights-usuario-card>
+
+      <app-insights-usuario-card
+        titulo="PARTIDAS CRIADAS"
+        [valor]="stats()?.partidasCriadas ?? 0"
+        [detalhe]="stats()?.comparacaoPartidasCriadasPorMes"
+        [icon]="CalendarIcon"
+        tone="emerald"
+      ></app-insights-usuario-card>
+
+      <app-insights-usuario-card
+        titulo="AVALIAÇÃO MÉDIA"
+        [valor]="ratingText()"
+        [hint]="ratingHint()"
+        [icon]="StarIcon"
+        tone="amber"
+      ></app-insights-usuario-card>
+
+      <app-insights-usuario-card
+        titulo="TAXA DE PRESENÇA"
+        [valor]="presenceText()"
+        [hint]="presenceHint()"
+        [icon]="TrendIcon"
+        tone="green"
+      ></app-insights-usuario-card>
+    </section>
+
+    <!-- Barra de busca + filtros -->
+    <section class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <!-- Busca -->
+      <div class="relative w-full lg:max-w-2xl">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <lucide-icon class="size-5" [img]="SearchIcon"></lucide-icon>
+        </span>
+
+        <input
+          [ngModel]="pesquisar()"
+          (ngModelChange)="pesquisar.set($event)"
+          type="text"
+          placeholder="Buscar partidas pelo nome..."
+          class="w-full rounded-xl border border-slate-200 bg-white px-10 py-2.5 text-base text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-sky-200"
+        />
+      </div>
+
+      <!-- Filtros -->
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 text-base text-slate-600">
+          <lucide-icon class="size-5 text-slate-500" [img]="FilterIcon"></lucide-icon>
+          <span>Filtros:</span>
+        </div>
+
+        <select
+          [ngModel]="filtroEsportes()"
+          (ngModelChange)="filtroEsportes.set($event)"
+          class="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-base shadow-sm outline-none focus:ring-2 focus:ring-sky-200"
+        >
+          @for (s of sportOptions(); track s) {
+            <option [value]="s">{{ s }}</option>
+          }
+        </select>
+
+        <select
+          [ngModel]="filtroStatus()"
+          (ngModelChange)="filtroStatus.set($event)"
+          class="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-base shadow-sm outline-none focus:ring-2 focus:ring-sky-200"
+        >
+          @for (st of statusOptions; track st) {
+            <option [value]="st">{{ st }}</option>
+          }
+        </select>
+
+        <app-button variant="outline" (click)="limparFiltros()">
+          Limpar
+        </app-button>
+      </div>
+    </section>
+
+    @if (partidasAbertas().length > 0) {
+      <section class="mb-8">
+        <div class="mb-4 flex items-center gap-2">
+          <lucide-icon class="size-5 text-sky-700" [img]="FlameIcon"></lucide-icon>
+
+          <h2 class="text-lg font-bold text-slate-900">Partidas Abertas</h2>
+
+          <span class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800">
+            {{ partidasAbertas().length }}
+          </span>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          @for (p of partidasAbertas(); track p.id) {
+            <app-partidas-card
+              [partida]="p"
+              modo="publica"
+              (viewDetails)="aoVerDetalhes($event)"
+              (requestJoin)="aoSolicitarParticipacao($event)"
+            ></app-partidas-card>
+          }
+        </div>
+      </section>
+    }
+
+    @if (outrasPartidas().length > 0) {
+      <section>
+        <h2 class="mb-4 text-lg font-bold text-slate-900">Outras Partidas</h2>
+
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          @for (p of outrasPartidas(); track p.id) {
+            <app-partidas-card
+              [partida]="p"
+              (viewDetails)="aoVerDetalhes($event)"
+            ></app-partidas-card>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Estado vazio -->
+    @if (filtered().length === 0) {
+      <div class="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center">
+        <div class="mx-auto mb-4 h-12 w-12 rounded-2xl bg-slate-100 grid place-items-center">
+          <lucide-icon class="size-6 text-slate-500" [img]="FlameIcon"></lucide-icon>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900">Nenhuma partida encontrada</h3>
+        <p class="mt-1 text-sm text-slate-600">Tente ajustar os filtros ou crie uma nova partida</p>
+
+        <div class="mt-6 flex justify-center">
+          <app-button variant="primary" (click)="aoCriarPartida()">
+            <span class="inline-flex items-center gap-2">
+              <lucide-icon class="size-4" [img]="PlusIcon"></lucide-icon>
+              Criar Partida
+            </span>
+          </app-button>
+        </div>
+      </div>
+    }
+
+  </main>
+</div>

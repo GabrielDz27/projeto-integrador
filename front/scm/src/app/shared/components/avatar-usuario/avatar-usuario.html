@@ -1,0 +1,18 @@
+<div
+  class="rounded-full overflow-hidden bg-slate-100 grid place-items-center font-extrabold text-slate-700 shrink-0"
+  [ngClass]="[sizeClass(), ringClass()]"
+>
+  @if (showImg()) {
+    <img
+      [src]="src!"
+      [alt]="alt ?? (name ?? 'Avatar')"
+      class="h-full w-full object-cover"
+      referrerpolicy="no-referrer"
+      (error)="onImgError()"
+    />
+  } @else {
+    <span class="select-none">
+      {{ initials() }}
+    </span>
+  }
+</div>

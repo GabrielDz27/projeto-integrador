@@ -31,8 +31,6 @@ public class Usuario {
 
     private String username;
 
-    private String biografia;
-
     private String senha;
 
     private Boolean ativo;
@@ -52,9 +50,6 @@ public class Usuario {
         this.cidade = dados.cidade();
         this.nome  = dados.nome();
 
-        if (dados.biografia() != null)
-            this.biografia = dados.biografia();
-
         if (dados.avatarUrl() != null)
             this.avatarUrl = dados.avatarUrl();
     }
@@ -69,9 +64,6 @@ public class Usuario {
         this.estado = dados.estado();
         this.cidade = dados.cidade();
         this.nome  = dados.nome();
-
-        if (dados.biografia() != null)
-            this.biografia = dados.biografia();
 
         if (dados.avatarUrl() != null)
             this.avatarUrl = dados.avatarUrl();

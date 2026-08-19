@@ -35,8 +35,6 @@ public record CreateUsuarioRequest(
         @Size(max = 60)
         String username,
 
-        String biografia,
-
         @NotBlank(message = "A senha é obrigatória")
         @Pattern.List({
                 @Pattern(regexp = ".*\\d.*", message = "A senha deve conter pelo menos um dígito (0-9)."),

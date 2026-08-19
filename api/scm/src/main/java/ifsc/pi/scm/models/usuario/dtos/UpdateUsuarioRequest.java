@@ -34,8 +34,6 @@ public record UpdateUsuarioRequest(
         @Size(max = 60)
         String username,
 
-        String biografia,
-
         @Pattern.List({
                 @Pattern(regexp = ".*\\d.*", message = "A senha deve conter pelo menos um dígito (0-9)."),
                 @Pattern(regexp = ".*[a-z].*", message = "A senha deve conter pelo menos uma letra minúscula (a-z)."),

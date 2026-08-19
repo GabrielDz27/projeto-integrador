@@ -1,0 +1,154 @@
+<div class="min-h-screen bg-gray-50">
+    <app-modal [open]="editOpen()" (openChange)="onCloseEditarPerfil()" title="Editar perfil"
+        description="Atualize seus dados cadastrais." [showFooter]="false">
+        @if (editLoading()) {
+        <div class="text-sm text-slate-500">Carregando dados...</div>
+        } @else {
+        <div class="perfil-modal-body">
+            @if (editError()) {
+            <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ editError() }}
+            </div>
+            }
+
+            <app-usuario-form modo="editar" [initialValue]="editInitial()"
+                (submitForm)="onSalvarPerfil($event)"></app-usuario-form>
+        </div>
+        }
+    </app-modal>
+
+    <div class="max-w-4xl mx-auto px-5 py-10">
+        @if (error()) {
+        <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+            {{ error() }}
+        </div>
+        }
+
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div class="p-6 sm:p-8">
+                <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="flex items-start gap-4 min-w-0">
+                        @if(session.user()?.avatarUrl == null) {
+                        <div
+                            class="bg-sky-700 text-white w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold">
+                            {{ session.userInitials() }}
+                        </div>
+                        } @else {
+                        <app-avatar-usuario [src]="session.user()?.avatarUrl" [name]="session.user()?.nome"
+                            size="lg"></app-avatar-usuario>
+                        }
+
+                        <div class="min-w-0">
+                            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 truncate">
+                                {{ usuario()?.nome }}
+                            </h1>
+                            <p class="text-sm text-slate-600 truncate">{{ usuario()?.email }}</p>
+
+                            <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                                <span
+                                    class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                                    {{ usuario()?.username }}
+                                </span>
+
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="text-slate-400">
+                                        <lucide-icon class="size-4" [img]="MapPinIcon"></lucide-icon>
+                                    </span>
+                                    {{ usuario()?.cidade }}, {{ usuario()?.estado }}
+                                </span>
+
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="text-slate-400">
+                                        <lucide-icon class="size-4" [img]="CalendarIcon"></lucide-icon>
+                                    </span>
+                                    {{ membroDesdeText() }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 justify-end">
+                        <app-button variant="outline" (click)="onEditarPerfil()">
+                            Editar perfil
+                        </app-button>
+                        <app-button variant="danger" (click)="onExcluirConta()">
+                            Excluir
+                        </app-button>
+                    </div>
+                </div>
+
+                @if (usuario()?.biografia) {
+                <p class="mt-6 text-slate-700 leading-relaxed">
+                    {{ usuario()?.biografia }}
+                </p>
+                }
+
+                <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center">
+                        <div class="text-2xl font-extrabold text-slate-900">{{ stats()?.partidasJogadas ?? 0 }}</div>
+                        <div class="text-xs font-semibold text-slate-500">Partidas</div>
+                        <div class="mt-1 text-xs text-slate-500">{{ stats()?.comparacaoPartidasJogadasPorMes }}</div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center">
+                        <div class="text-2xl font-extrabold text-slate-900">{{ stats()?.partidasCriadas ?? 0 }}</div>
+                        <div class="text-xs font-semibold text-slate-500">Criadas</div>
+                        <div class="mt-1 text-xs text-slate-500">{{ stats()?.comparacaoPartidasCriadasPorMes }}</div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center">
+                        <div class="text-2xl font-extrabold text-slate-900 mb-2 items-center justify-center flex gap-1">
+                            <lucide-icon class="size-6 text-amber-600" [img]="StarIcon"></lucide-icon> {{ ratingText()
+                            }}
+                        </div>
+                        <div class="text-xs font-semibold text-slate-500">Avaliação</div>
+                        <div class="mt-1 text-xs text-slate-500">média</div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-center">
+                        <div class="text-2xl font-extrabold text-slate-900 mb-2">{{ presenceText() }}</div>
+                        <div class="text-xs font-semibold text-slate-500">Presença</div>
+                        <div class="mt-1 text-xs text-slate-500">taxa</div>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <div class="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                        <lucide-icon class="size-4" [img]="TrophyIcon"></lucide-icon> Conquistas
+                    </div>
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        @for (c of conquistas(); track c.key) {
+                        <div class="rounded-2xl border px-4 py-4 flex items-start gap-3"
+                            [ngClass]="c.unlocked ? 'border-orange-200 bg-orange-50 text-orange-800' : 'border-slate-200 bg-slate-50 text-slate-600'">
+                            <div class="flex flex-col justify-between w-100">
+                                <div class="h-10 w-10 rounded-xl grid place-items-center text-lg"
+                                    [ngClass]="c.unlocked ? 'bg-orange-100' : 'bg-slate-200/60'">
+                                    <lucide-icon class="size-4" [img]="c.icon"></lucide-icon>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <div class="font-bold">{{ c.titulo }}</div>
+                                    <div class="text-sm">{{ c.descricao }}</div>
+                                    @if (!c.unlocked) {
+                                    <div class="mt-1 text-xs text-slate-500">Bloqueada</div>
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                @if (!c.unlocked) {
+                                <lucide-icon class="size-4" [img]="LockIcon"></lucide-icon>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading()) {
+        <div class="mt-6 text-sm text-slate-500">Carregando...</div>
+        }
+    </div>
+</div>

@@ -10,7 +10,6 @@ public record DetailUsuarioResponse(
         String estado,
         String cidade,
         String username,
-        String biografia,
         String avatarUrl
 ) {
     public DetailUsuarioResponse(Usuario dados) {
@@ -22,7 +21,6 @@ public record DetailUsuarioResponse(
                 dados.getEstado(),
                 dados.getCidade(),
                 dados.getUsername(),
-                dados.getBiografia(),
                 dados.getAvatarUrl()
         );
     }

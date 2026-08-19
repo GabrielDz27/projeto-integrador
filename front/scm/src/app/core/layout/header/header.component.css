@@ -1,0 +1,71 @@
+.header-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0.75rem 0;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+a {
+  padding: 10px;
+  font-size: medium;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+a:hover {
+  color: black;
+  background-color: rgb(221, 221, 221);
+}
+
+.user-menu-trigger {
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.user-menu-trigger:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.user-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 110;
+}
+
+.user-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #1f2937;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.user-menu-item:hover {
+  background-color: rgba(15, 23, 42, 0.08);
+}
+
+.user-menu-item.danger {
+  color: #b91c1c;
+}
