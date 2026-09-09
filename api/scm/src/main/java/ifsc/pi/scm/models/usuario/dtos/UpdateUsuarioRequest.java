@@ -3,6 +3,9 @@ package ifsc.pi.scm.models.usuario.dtos;
 import jakarta.validation.constraints.*;
 
 public record UpdateUsuarioRequest(
+        @Pattern(regexp = "\\d{11}", message = "CPF inválido")
+        String cpf,
+
         @NotBlank(message = "O nome é obrigatório")
         @Size(min = 1, max = 150)
         String nome,
@@ -24,10 +27,10 @@ public record UpdateUsuarioRequest(
         )
         String cep,
 
-        @NotNull(message = "Estado é obrigatório")
+        @NotBlank(message = "Estado é obrigatório")
         String estado,
 
-        @NotBlank(message = "A cidade é obrigatório")
+        @NotBlank(message = "A cidade é obrigatória")
         String cidade,
 
         @NotBlank(message = "O username é obrigatório")

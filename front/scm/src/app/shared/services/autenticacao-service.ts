@@ -13,21 +13,21 @@ interface AuthResponse {
   providedIn: 'root',
 })
 export class AutenticacaoService {
-  private apiUrl = environment.apiUrl;
+  private readonly apiUrl = environment.apiUrl;
 
   constructor(
-    private http: HttpClient,
-    private userService: UsuarioService
+    private readonly http: HttpClient,
+    private readonly userService: UsuarioService
   ) {}
 
-  login(username: any, senha: any): Observable<HttpResponse<AuthResponse>>  {
+  login(username: string, senha: string): Observable<HttpResponse<AuthResponse>> {
     return this.http.post<AuthResponse>(
       `${this.apiUrl}/auth/login`,
       { username, senha },
-      { observe: 'response'}
+      { observe: 'response' }
     ).pipe(
       tap((response) => {
-        const authToken = response.body? response.body['jwt-token'] : '';
+        const authToken = response.body ? response.body['jwt-token'] : '';
         this.userService.salvarToken(authToken);
       })
     );
@@ -46,4 +46,11 @@ export class AutenticacaoService {
     );
   }
 
+  solicitarRecuperacaoSenha(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/recuperar-senha-solicitar`, { email });
+  }
+
+  confirmarRecuperacaoSenha(token: string, novaSenha: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/recuperar-senha-confirmar`, { token, novaSenha });
+  }
 }

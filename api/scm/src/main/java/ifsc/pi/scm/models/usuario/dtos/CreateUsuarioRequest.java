@@ -4,6 +4,9 @@ import jakarta.validation.constraints.*;
 
 public record CreateUsuarioRequest(
 
+        @Pattern(regexp = "\\d{11}", message = "CPF inválido")
+        String cpf,
+
         @NotBlank(message = "O nome é obrigatório")
         @Size(min = 1, max = 150)
         String nome,
