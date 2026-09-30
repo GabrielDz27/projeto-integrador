@@ -1,10 +1,13 @@
-<app-layout-auth>
-  <div class="w-full max-w-xl rounded-2xl border border-black/15 bg-white/10 p-10 backdrop-blur-sm">
-    <div>
-      <h2 class="text-3xl font-semibold text-slate-900">Cadastrar</h2>
-      <p class="mt-1 text-slate-600">Crie sua conta para continuar.</p>
+<app-layout-auth
+  titulo="Crie seu acesso ao SCM"
+  subtitulo="Cadastre seu usuário para acompanhar clientes, faturamento e obrigações fiscais."
+  badge="SCM | GESTÃO MEI">
+  <div class="register-card">
+    <div class="register-heading">
+      <p class="eyebrow">Novo acesso</p>
+      <h2>Criar conta</h2>
+      <p>Preencha seus dados para começar a usar o Sistema de Gestão Simplificada.</p>
     </div>
-
-    <app-usuario-form></app-usuario-form>
+    <app-usuario-form [submitting]="isSubmitting()" (submitForm)="onSubmit($event)"></app-usuario-form>
   </div>
 </app-layout-auth>

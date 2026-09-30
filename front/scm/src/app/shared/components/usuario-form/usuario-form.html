@@ -16,16 +16,17 @@
     </div>
 
     <div class="flex-1">
-      <label class="block text-sm font-semibold text-slate-900">Foto de perfil</label>
+      <label class="block text-sm font-semibold text-slate-900">Foto do usuário <span class="font-normal text-slate-500">(opcional)</span></label>
 
       <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <input type="file" accept="image/*" (change)="onAvatarPicked($event)"
           class="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:font-semibold file:text-slate-700 hover:file:bg-slate-200" />
 
         @if (avatarPreviewUrl()) {
-        <app-button type="button" variant="outline" (click)="clearAvatar()">
+        <button type="button" (click)="clearAvatar()"
+          class="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100">
           Remover
-        </app-button>
+        </button>
         }
       </div>
 
@@ -43,43 +44,32 @@
   <div>
     <label class="block text-sm font-semibold text-slate-900">Nome</label>
     <input type="text" formControlName="nome" placeholder="Seu nome completo"
+      [class.input-invalid]="form.controls.nome.touched && form.controls.nome.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-    @if (form.controls.nome.touched && form.controls.nome.invalid) {
-    <p class="mt-2 text-sm text-red-600">Informe um nome válido (mínimo 2 caracteres).</p>
-    }
   </div>
 
   <!-- Email -->
   <div>
     <label class="block text-sm font-semibold text-slate-900">Email</label>
     <input type="email" formControlName="email" placeholder="seuemail@exemplo.com"
+      [class.input-invalid]="form.controls.email.touched && form.controls.email.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-    @if (form.controls.email.touched && form.controls.email.invalid) {
-    <p class="mt-2 text-sm text-red-600">
-      @if (form.controls.email.errors?.['email']) { Informe um email válido. }
-      @else { Informe um email. }
-    </p>
-    }
   </div>
 
   <!-- Telefone / CEP -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
       <label class="block text-sm font-semibold text-slate-900">Telefone</label>
-      <input type="text" formControlName="telefone" placeholder="(00) 00000-0000"
+      <input type="tel" formControlName="telefone" appNumericMask="telefone" inputmode="numeric" maxlength="15" placeholder="(00) 00000-0000"
+        [class.input-invalid]="form.controls.telefone.touched && form.controls.telefone.invalid"
         class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-      @if (form.controls.telefone.touched && form.controls.telefone.invalid) {
-      <p class="mt-2 text-sm text-red-600">Informe um telefone.</p>
-      }
     </div>
 
     <div>
       <label class="block text-sm font-semibold text-slate-900">CEP</label>
-      <input type="text" formControlName="cep" placeholder="00000-000"
+      <input type="text" formControlName="cep" appNumericMask="cep" inputmode="numeric" maxlength="9" placeholder="00000-000"
+        [class.input-invalid]="form.controls.cep.touched && form.controls.cep.invalid"
         class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-      @if (form.controls.cep.touched && form.controls.cep.invalid) {
-      <p class="mt-2 text-sm text-red-600">Informe um CEP.</p>
-      }
     </div>
   </div>
 
@@ -87,39 +77,30 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
       <label class="block text-sm font-semibold text-slate-900">Estado</label>
-      <input type="text" formControlName="estado" placeholder="UF"
-        class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-      @if (form.controls.estado.touched && form.controls.estado.invalid) {
-      <p class="mt-2 text-sm text-red-600">Informe o estado.</p>
-      }
+      <select formControlName="estado"
+        [class.input-invalid]="form.controls.estado.touched && form.controls.estado.invalid"
+        class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-600">
+        <option value="">Selecione o estado</option>
+        @for (estado of estados; track estado.uf) {
+        <option [value]="estado.uf">{{ estado.nome }}</option>
+        }
+      </select>
     </div>
 
     <div>
       <label class="block text-sm font-semibold text-slate-900">Cidade</label>
       <input type="text" formControlName="cidade" placeholder="Sua cidade"
+        [class.input-invalid]="form.controls.cidade.touched && form.controls.cidade.invalid"
         class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-      @if (form.controls.cidade.touched && form.controls.cidade.invalid) {
-      <p class="mt-2 text-sm text-red-600">Informe a cidade.</p>
-      }
     </div>
   </div>
 
   <!-- Username -->
   <div>
-    <label class="block text-sm font-semibold text-slate-900">Login / Username</label>
-    <input type="text" formControlName="username" placeholder="Seu login / username"
+    <label class="block text-sm font-semibold text-slate-900">Usuário de acesso</label>
+    <input type="text" formControlName="username" placeholder="Escolha um usuário para entrar no SCM"
+      [class.input-invalid]="form.controls.username.touched && form.controls.username.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-    @if (form.controls.username.touched && form.controls.username.invalid) {
-    <p class="mt-2 text-sm text-red-600">Login / Username mínimo 3 caracteres.</p>
-    }
-  </div>
-
-  <!-- Biografia -->
-  <div>
-    <label class="block text-sm font-semibold text-slate-900">Biografia</label>
-    <textarea rows="3" formControlName="biografia"
-      placeholder="Conte um pouco sobre você, quais esportes pratica, gosta, possui preferência, etc..."
-      class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600"></textarea>
   </div>
 
   <!-- Senha -->
@@ -133,15 +114,9 @@
       </label>
     </div>
 
-    <input type="password" formControlName="senha" placeholder="••••••••"
+    <input type="password" formControlName="senha" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"
+      [class.input-invalid]="form.controls.senha.touched && form.controls.senha.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
-
-    @if (form.controls.senha.touched && form.controls.senha.invalid) {
-    <p class="mt-2 text-sm text-red-600">
-      @if (form.controls.senha.errors?.['required']) { Informe uma senha. }
-      @else if (form.controls.senha.errors?.['minlength']) { Senha mínima de 6 caracteres. }
-    </p>
-    }
 
     @if (modo === 'editar') {
     <p class="mt-2 text-xs text-slate-500">
@@ -150,11 +125,12 @@
     }
   </div>
 
-  <app-button type="submit" variant="primary" [disabled]="isSubmitting() || form.invalid" [fullWidth]="true">
+  <button type="submit" [disabled]="submitting || avatarUploading() || form.invalid"
+    class="w-full rounded-xl bg-sky-600 px-4 py-3 font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60">
     @if (modo === 'cadastrar') {
-    {{ isSubmitting() ? 'Criando...' : 'Criar conta' }}
+    {{ submitting ? 'Criando...' : 'Criar conta' }}
     } @else {
-    {{ isSubmitting() ? 'Salvando...' : 'Salvar alterações' }}
+    {{ submitting ? 'Salvando...' : 'Salvar alterações' }}
     }
-  </app-button>
+  </button>
 </form>

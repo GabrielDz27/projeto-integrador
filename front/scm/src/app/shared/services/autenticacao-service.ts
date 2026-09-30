@@ -3,7 +3,7 @@ import { environment } from '../../../environments/environment';
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { UsuarioService } from './usuario-service';
-import { UsuarioInterface } from '../../core/models/UsuarioInterface';
+import type { CreateUsuarioDTO } from '../models/usuario.models';
 
 interface AuthResponse {
   'jwt-token': string;
@@ -33,7 +33,7 @@ export class AutenticacaoService {
     );
   }
 
-  cadastrarUsuario(usuario: UsuarioInterface): Observable<HttpResponse<AuthResponse>> {
+  cadastrarUsuario(usuario: CreateUsuarioDTO): Observable<HttpResponse<AuthResponse>> {
     return this.http.post<AuthResponse>(
       `${this.apiUrl}/auth/register`,
       usuario,

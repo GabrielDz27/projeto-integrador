@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class ClienteService {
@@ -29,10 +30,24 @@ public class ClienteService {
         return clienteRepository.findAll(pageable).map(ClienteResponse::new);
     }
 
+    public Page<ClienteResponse> listar(String busca, Pageable pageable) {
+        if (busca == null || busca.isBlank()) return listar(pageable);
+        String termo = busca.trim();
+        return clienteRepository.findByNomeContainingIgnoreCaseOrEmailContainingIgnoreCaseOrCpfContaining(
+                termo, termo, termo, pageable).map(ClienteResponse::new);
+    }
+
     public ClienteResponse buscarPorId(UUID id) {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado."));
         return new ClienteResponse(cliente);
+    }
+
+    public List<HistoricoCliente> historico(UUID id) {
+        if (!clienteRepository.existsById(id)) {
+            throw new EntityNotFoundException("Cliente não encontrado.");
+        }
+        return historicoClienteRepository.findByClienteIdOrderByDataHoraDesc(id);
     }
 
     @Transactional
@@ -69,6 +84,7 @@ public class ClienteService {
         cliente.setCidade(request.cidade());
         cliente.setEstado(request.estado());
         cliente.setCep(request.cep());
+        if (request.ativo() != null) cliente.setAtivo(request.ativo());
 
         Cliente salvo = clienteRepository.save(cliente);
         registrarHistorico(salvo, "ALTERACAO", "nome", valorAnterior, request.nome(), "Atualização do cliente.");
@@ -81,7 +97,8 @@ public class ClienteService {
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado."));
 
         registrarHistorico(cliente, "EXCLUSAO", null, null, "cliente", "Exclusão do cliente.");
-        clienteRepository.delete(cliente);
+        cliente.setAtivo(false);
+        clienteRepository.save(cliente);
     }
 
     private void registrarHistorico(Cliente cliente, String tipoOperacao, String campoAlterado, String valorAnterior, String valorNovo, String observacao) {

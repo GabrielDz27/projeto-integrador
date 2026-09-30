@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AutenticacaoService } from '../../../../shared/services/autenticacao-service';
+import { NotificationService } from '../../../../shared/services/notification-service';
+import { trimmedRequired } from '../../../../shared/utils/form-validators';
 
 @Component({
   selector: 'app-forgot-password',
@@ -14,14 +16,10 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
         <h1>Recuperar senha</h1>
         <p>Informe seu e-mail cadastrado para receber o token de recuperação.</p>
 
-        @if (message()) {
-          <div class="alert success">{{ message() }}</div>
-        }
-
         <form [formGroup]="form" (ngSubmit)="submit()">
           <label>
             <span>E-mail</span>
-            <input type="email" formControlName="email" placeholder="seu@email.com" />
+            <input type="email" formControlName="email" placeholder="seu@email.com" [class.input-invalid]="form.controls.email.touched && form.controls.email.invalid" />
           </label>
 
           <button type="submit" [disabled]="form.invalid || sending()">{{ sending() ? 'Enviando...' : 'Enviar link' }}</button>
@@ -43,6 +41,7 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
       form { display:grid; gap:16px; }
       label { display:grid; gap:8px; color:#334155; font-weight:600; }
       input { border:1px solid #dbe3ef; border-radius:10px; padding:12px 14px; font-size:1rem; }
+      input.input-invalid { border-color:#dc2626; }
       button { background:#0f172a; color:#fff; border:none; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
       button:disabled { opacity:.6; cursor:not-allowed; }
       .alert { margin-bottom:12px; padding:10px 12px; border-radius:8px; }
@@ -56,23 +55,22 @@ export class ForgotPasswordComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AutenticacaoService);
 
-  readonly message = signal('');
   readonly sending = signal(false);
+  private readonly notifications = inject(NotificationService);
 
   readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]]
+    email: ['', [trimmedRequired, Validators.email]]
   });
 
   submit(): void {
     if (this.form.invalid) return;
     this.sending.set(true);
-    this.authService.solicitarRecuperacaoSenha(this.form.getRawValue().email).subscribe({
+    this.authService.solicitarRecuperacaoSenha(this.form.getRawValue().email.trim()).subscribe({
       next: (response) => {
-        this.message.set(response?.message ?? 'Se o e-mail estiver cadastrado, o link foi enviado.');
+        this.notifications.success(response?.message ?? 'Se o e-mail estiver cadastrado, o link foi enviado.');
         this.sending.set(false);
       },
       error: () => {
-        this.message.set('Não foi possível processar sua solicitação. Tente novamente.');
         this.sending.set(false);
       }
     });

@@ -47,6 +47,9 @@ public class Cliente {
     @Column(length = 9)
     private String cep;
 
+    @Column(nullable = false)
+    private Boolean ativo;
+
     @Column(name = "data_cadastro")
     private LocalDateTime dataCadastro;
 
@@ -54,6 +57,9 @@ public class Cliente {
     public void onCreate() {
         if (this.dataCadastro == null) {
             this.dataCadastro = LocalDateTime.now();
+        }
+        if (this.ativo == null) {
+            this.ativo = true;
         }
     }
 }

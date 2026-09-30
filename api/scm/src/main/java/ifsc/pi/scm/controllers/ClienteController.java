@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
@@ -22,13 +23,19 @@ public class ClienteController {
     private ClienteService clienteService;
 
     @GetMapping
-    public ResponseEntity<Page<ClienteResponse>> listar(@PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(clienteService.listar(pageable));
+    public ResponseEntity<Page<ClienteResponse>> listar(@RequestParam(required = false) String busca,
+                                                        @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
+        return ResponseEntity.ok(clienteService.listar(busca, pageable));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ClienteResponse> buscarPorId(@PathVariable UUID id) {
         return ResponseEntity.ok(clienteService.buscarPorId(id));
+    }
+
+    @GetMapping("/{id}/historico")
+    public ResponseEntity<?> historico(@PathVariable UUID id) {
+        return ResponseEntity.ok(clienteService.historico(id));
     }
 
     @PostMapping

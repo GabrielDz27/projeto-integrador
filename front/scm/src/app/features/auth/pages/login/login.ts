@@ -1,16 +1,18 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { LayoutAuth } from '../../../../shared/components/layout-auth/layout-auth';
-import {ButtonComponent} from '../../../../shared/ui/button/button';
 import { AutenticacaoService } from '../../../../shared/services/autenticacao-service';
+import { trimmedRequired } from '../../../../shared/utils/form-validators';
+import { extractApiError } from '../../../../shared/utils/http-error';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, LayoutAuth, ButtonComponent],
-  templateUrl: './login.html'
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, LayoutAuth],
+  templateUrl: './login.html',
+  styles: [`.input-invalid{border-color:#dc2626!important}.login-submit{width:100%;padding:12px 16px;border:0;border-radius:6px;background:#1d4ed8;color:#fff;font-weight:700}.login-submit:disabled{opacity:.55;cursor:not-allowed}`]
 })
 export class Login {
   private readonly fb = new FormBuilder();
@@ -21,8 +23,8 @@ export class Login {
   isSubmitting = signal(false);
 
   form = this.fb.nonNullable.group({
-    login: ['', [Validators.required, Validators.minLength(3)]],
-    senha: ['', [Validators.required, Validators.minLength(6)]],
+    login: ['', trimmedRequired],
+    senha: ['', trimmedRequired],
   });
 
   submit() {
@@ -35,14 +37,15 @@ export class Login {
 
     this.isSubmitting.set(true);
 
-    this.api.login(this.form.value.login, this.form.value.senha).subscribe({
+    const { login, senha } = this.form.getRawValue();
+    this.api.login(login.trim(), senha).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         void this.router.navigateByUrl('/inicio');
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        this.formError.set(err?.error?.message ?? 'Não foi possível logar a conta.');
+        this.formError.set(extractApiError(err, 'Não foi possível iniciar a sessão.'));
       },
     });
   }

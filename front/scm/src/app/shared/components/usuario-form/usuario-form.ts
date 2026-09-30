@@ -3,13 +3,15 @@ import { Component, EventEmitter, Input, Output, inject, signal } from '@angular
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import type { CreateUsuarioDTO, UpdateUsuarioDTO, UsuarioPerfilVM } from '../../models/usuario.models';
-import { ButtonComponent } from '../../ui/button/button';
 import { CloudinaryService } from '../../services/cloudinary-service';
+import { NumericMaskDirective } from '../../directives/numeric-mask.directive';
+import { minTrimmedLength, trimmedRequired } from '../../utils/form-validators';
 
 @Component({
   selector: 'app-usuario-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent],
-  templateUrl: './usuario-form.html'
+  imports: [CommonModule, ReactiveFormsModule, NumericMaskDirective],
+  templateUrl: './usuario-form.html',
+  styleUrl: './usuario-form.css'
 })
 export class UsuarioForm {
   private readonly fb = inject(FormBuilder);
@@ -25,10 +27,23 @@ export class UsuarioForm {
     return this._modo;
   }
 
+  @Input() submitting = false;
+
   readonly avatarPreviewUrl = signal<string | null>(null);
   readonly avatarUrl = signal<string | null>(null);
   readonly avatarUploading = signal(false);
   readonly avatarError = signal<string | null>(null);
+  readonly estados = [
+    { uf: 'AC', nome: 'Acre' }, { uf: 'AL', nome: 'Alagoas' }, { uf: 'AP', nome: 'Amapá' },
+    { uf: 'AM', nome: 'Amazonas' }, { uf: 'BA', nome: 'Bahia' }, { uf: 'CE', nome: 'Ceará' },
+    { uf: 'DF', nome: 'Distrito Federal' }, { uf: 'ES', nome: 'Espírito Santo' }, { uf: 'GO', nome: 'Goiás' },
+    { uf: 'MA', nome: 'Maranhão' }, { uf: 'MT', nome: 'Mato Grosso' }, { uf: 'MS', nome: 'Mato Grosso do Sul' },
+    { uf: 'MG', nome: 'Minas Gerais' }, { uf: 'PA', nome: 'Pará' }, { uf: 'PB', nome: 'Paraíba' },
+    { uf: 'PR', nome: 'Paraná' }, { uf: 'PE', nome: 'Pernambuco' }, { uf: 'PI', nome: 'Piauí' },
+    { uf: 'RJ', nome: 'Rio de Janeiro' }, { uf: 'RN', nome: 'Rio Grande do Norte' }, { uf: 'RS', nome: 'Rio Grande do Sul' },
+    { uf: 'RO', nome: 'Rondônia' }, { uf: 'RR', nome: 'Roraima' }, { uf: 'SC', nome: 'Santa Catarina' },
+    { uf: 'SP', nome: 'São Paulo' }, { uf: 'SE', nome: 'Sergipe' }, { uf: 'TO', nome: 'Tocantins' },
+  ];
 
   @Input() set initialValue(value: UsuarioPerfilVM | null) {
     if (!value) return;
@@ -36,12 +51,11 @@ export class UsuarioForm {
     this.form.patchValue({
       nome: value.nome ?? '',
       email: value.email ?? '',
-      telefone: value.telefone ?? '',
-      cep: value.cep ?? '',
+      telefone: (value.telefone ?? '').replace(/\D/g, '').slice(0, 11),
+      cep: (value.cep ?? '').replace(/\D/g, '').slice(0, 8),
       estado: value.estado ?? '',
       cidade: value.cidade ?? '',
       username: value.username ?? '',
-      biografia: value.biografia ?? '',
     });
 
     if (value.avatarUrl) {
@@ -51,19 +65,17 @@ export class UsuarioForm {
   }
 
   apiError = signal<string | null>(null);
-  isSubmitting = signal(false);
 
   @Output() submitForm = new EventEmitter<CreateUsuarioDTO | UpdateUsuarioDTO>();
 
   readonly form = this.fb.nonNullable.group({
-    nome: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(2)]),
-    email: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
-    telefone: this.fb.nonNullable.control('', [Validators.required]),
-    cep: this.fb.nonNullable.control('', [Validators.required]),
+    nome: this.fb.nonNullable.control('', [trimmedRequired, minTrimmedLength(2), Validators.maxLength(150)]),
+    email: this.fb.nonNullable.control('', [Validators.required, Validators.email, Validators.maxLength(250)]),
+    telefone: this.fb.nonNullable.control('', [Validators.pattern(/^\d{10,11}$/)]),
+    cep: this.fb.nonNullable.control('', [Validators.pattern(/^\d{8}$/)]),
     estado: this.fb.nonNullable.control('', [Validators.required]),
-    cidade: this.fb.nonNullable.control('', [Validators.required]),
-    username: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(3)]),
-    biografia: this.fb.nonNullable.control(''),
+    cidade: this.fb.nonNullable.control('', [trimmedRequired, Validators.maxLength(150)]),
+    username: this.fb.nonNullable.control('', [trimmedRequired, minTrimmedLength(3), Validators.maxLength(50)]),
     senha: this.fb.nonNullable.control('', []),
   });
 
@@ -76,9 +88,9 @@ export class UsuarioForm {
     control.clearValidators();
 
     if (this.modo === 'cadastrar') {
-      control.addValidators([Validators.required, Validators.minLength(6)]);
+      control.addValidators([trimmedRequired, minTrimmedLength(6)]);
     } else {
-      control.addValidators([Validators.minLength(6)]);
+      control.addValidators(minTrimmedLength(6));
     }
 
     control.updateValueAndValidity({ emitEvent: false });
@@ -142,12 +154,11 @@ export class UsuarioForm {
       const dto: CreateUsuarioDTO = {
         nome: raw.nome.trim(),
         email: raw.email.trim(),
-        telefone: raw.telefone.trim(),
-        cep: raw.cep.trim(),
-        estado: raw.estado.trim(),
+        telefone: this.optionalDigits(raw.telefone),
+        cep: this.optionalDigits(raw.cep),
+        estado: raw.estado.trim().toUpperCase(),
         cidade: raw.cidade.trim(),
         username: raw.username.trim(),
-        biografia: raw.biografia?.trim() ?? '',
         senha: raw.senha,
         ...(avatarUrl ? { avatarUrl } : {}),
       };
@@ -158,16 +169,19 @@ export class UsuarioForm {
     const dto: UpdateUsuarioDTO = {
       nome: raw.nome.trim(),
       email: raw.email.trim(),
-      telefone: raw.telefone.trim(),
-      cep: raw.cep.trim(),
-      estado: raw.estado.trim(),
+      telefone: this.optionalDigits(raw.telefone),
+      cep: this.optionalDigits(raw.cep),
+      estado: raw.estado.trim().toUpperCase(),
       cidade: raw.cidade.trim(),
       username: raw.username.trim(),
-      biografia: raw.biografia?.trim() ?? '',
-      ...(raw.senha ? { senha: raw.senha } : {}),
+      ...(raw.senha.trim() ? { senha: raw.senha.trim() } : {}),
       ...(avatarUrl ? { avatarUrl } : {}),
     };
 
     this.submitForm.emit(dto);
+  }
+
+  private optionalDigits(value: string): string | undefined {
+    return value.replace(/\D/g, '') || undefined;
   }
 }

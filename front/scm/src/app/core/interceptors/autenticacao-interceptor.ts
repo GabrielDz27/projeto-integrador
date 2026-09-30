@@ -8,7 +8,7 @@ import { catchError, throwError } from 'rxjs';
 export const autenticacaoInterceptor: HttpInterceptorFn = (req, next) => {
   const tokenService = inject(TokenService);
   const router = inject(Router);
-  const token = localStorage.getItem('token');
+  const token = tokenService.retornarToken();
 
   if(req.url.includes('api.cloudinary.com'))
     return next(req);

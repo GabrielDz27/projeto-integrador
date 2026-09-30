@@ -8,7 +8,7 @@ WORKDIR /app
 COPY target/*.jar app.jar
 
 # Define a porta padrão exposta
-EXPOSE 8080
+EXPOSE 8081
 
 # Executa a aplicação Spring Boot
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AutenticacaoService } from '../../../../shared/services/autenticacao-service';
+import { NotificationService } from '../../../../shared/services/notification-service';
+import { minTrimmedLength, trimmedRequired } from '../../../../shared/utils/form-validators';
 
 @Component({
   selector: 'app-reset-password',
@@ -21,12 +23,12 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
         <form [formGroup]="form" (ngSubmit)="submit()">
           <label>
             <span>Nova senha</span>
-            <input type="password" formControlName="novaSenha" placeholder="Digite a nova senha" />
+            <input type="password" formControlName="novaSenha" placeholder="Digite a nova senha" [class.input-invalid]="form.controls.novaSenha.touched && form.controls.novaSenha.invalid" />
           </label>
 
           <label>
             <span>Confirmar senha</span>
-            <input type="password" formControlName="confirmacao" placeholder="Confirme a nova senha" />
+            <input type="password" formControlName="confirmacao" placeholder="Confirme a nova senha" [class.input-invalid]="form.controls.confirmacao.touched && form.controls.confirmacao.invalid" />
           </label>
 
           <button type="submit" [disabled]="form.invalid || sending()">{{ sending() ? 'Salvando...' : 'Salvar senha' }}</button>
@@ -48,6 +50,7 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
       form { display:grid; gap:16px; }
       label { display:grid; gap:8px; color:#334155; font-weight:600; }
       input { border:1px solid #dbe3ef; border-radius:10px; padding:12px 14px; font-size:1rem; }
+      input.input-invalid { border-color:#dc2626; }
       button { background:#2563eb; color:#fff; border:none; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
       button:disabled { opacity:.6; cursor:not-allowed; }
       .alert { margin-bottom:12px; padding:10px 12px; border-radius:8px; }
@@ -62,13 +65,14 @@ export class ResetPasswordComponent {
   private readonly authService = inject(AutenticacaoService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
   readonly message = signal('');
   readonly sending = signal(false);
 
   readonly form = this.fb.nonNullable.group({
-    novaSenha: ['', [Validators.required, Validators.minLength(6)]],
-    confirmacao: ['', [Validators.required, Validators.minLength(6)]]
+    novaSenha: ['', [trimmedRequired, minTrimmedLength(6)]],
+    confirmacao: ['', [trimmedRequired, minTrimmedLength(6)]]
   });
 
   submit(): void {
@@ -84,12 +88,11 @@ export class ResetPasswordComponent {
     this.sending.set(true);
     this.authService.confirmarRecuperacaoSenha(token, novaSenha).subscribe({
       next: (response) => {
-        this.message.set(response?.message ?? 'Senha redefinida com sucesso.');
+        this.notifications.success(response?.message ?? 'Senha redefinida com sucesso.');
         this.sending.set(false);
         setTimeout(() => this.router.navigateByUrl('/login'), 1200);
       },
       error: () => {
-        this.message.set('Não foi possível redefinir a senha.');
         this.sending.set(false);
       }
     });

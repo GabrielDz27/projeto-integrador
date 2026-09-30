@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AutenticacaoService } from '../../../../shared/services/autenticacao-service';
+import { NotificationService } from '../../../../shared/services/notification-service';
+import { trimmedRequired } from '../../../../shared/utils/form-validators';
 
 @Component({
   selector: 'app-login',
@@ -14,19 +16,15 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
         <h1>SCM</h1>
         <p>Entre com suas credenciais</p>
 
-        @if (error()) {
-          <div class="alert error">{{ error() }}</div>
-        }
-
         <form [formGroup]="form" (ngSubmit)="submit()">
           <label>
             <span>Usuário</span>
-            <input formControlName="username" type="text" placeholder="Digite seu usuário" />
+            <input formControlName="username" type="text" placeholder="Digite seu usuário" [class.input-invalid]="form.controls.username.touched && form.controls.username.invalid" />
           </label>
 
           <label>
             <span>Senha</span>
-            <input formControlName="senha" type="password" placeholder="Digite sua senha" />
+            <input formControlName="senha" type="password" placeholder="Digite sua senha" [class.input-invalid]="form.controls.senha.touched && form.controls.senha.invalid" />
           </label>
 
           <button type="submit" [disabled]="form.invalid || sending()">{{ sending() ? 'Entrando...' : 'Entrar' }}</button>
@@ -34,6 +32,11 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
 
         <div class="actions">
           <a routerLink="/esqueci-minha-senha">Esqueci minha senha</a>
+        </div>
+
+        <div class="register-prompt">
+          <span>Não possui cadastro?</span>
+          <a routerLink="/cadastro">Criar uma conta</a>
         </div>
       </section>
     </main>
@@ -48,11 +51,13 @@ import { AutenticacaoService } from '../../../../shared/services/autenticacao-se
       form { display:grid; gap:16px; }
       label { display:grid; gap:8px; color:#334155; font-weight:600; }
       input { border:1px solid #dbe3ef; border-radius:10px; padding:12px 14px; font-size:1rem; }
+      input.input-invalid { border-color:#dc2626; }
       button { background:#2563eb; color:#fff; border:none; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
       button:disabled { opacity:.6; cursor:not-allowed; }
       .alert { margin-bottom:12px; padding:10px 12px; border-radius:8px; font-size:.9rem; }
       .alert.error { background:#fee2e2; color:#991b1b; }
       .actions { display:flex; justify-content:flex-end; margin-top:16px; }
+      .register-prompt { display:flex; justify-content:center; gap:6px; margin-top:22px; padding-top:18px; border-top:1px solid #e2e8f0; color:#475569; font-size:.9rem; }
       a { color:#2563eb; text-decoration:none; }
     `
   ]
@@ -61,13 +66,13 @@ export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AutenticacaoService);
   private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
-  readonly error = signal('');
   readonly sending = signal(false);
 
   readonly form = this.fb.nonNullable.group({
-    username: ['', [Validators.required]],
-    senha: ['', [Validators.required]]
+    username: ['', [trimmedRequired]],
+    senha: ['', [trimmedRequired]]
   });
 
   submit(): void {
@@ -77,13 +82,14 @@ export class LoginComponent {
     }
 
     this.sending.set(true);
-    this.error.set('');
 
     const { username, senha } = this.form.getRawValue();
-    this.authService.login(username, senha).subscribe({
-      next: () => this.router.navigateByUrl('/usuarios'),
+    this.authService.login(username.trim(), senha).subscribe({
+      next: () => {
+        this.notifications.success('Sessão iniciada.');
+        void this.router.navigateByUrl('/inicio');
+      },
       error: () => {
-        this.error.set('Credenciais inválidas. Verifique usuário e senha.');
         this.sending.set(false);
       },
       complete: () => this.sending.set(false)

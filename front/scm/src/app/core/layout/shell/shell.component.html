@@ -1,7 +1,17 @@
-<div class="min-h-screen bg-slate-50 text-slate-800">
+<div class="app-shell">
   <app-header></app-header>
 
-  <main class="pt-20">
-    <router-outlet></router-outlet>
-  </main>
+  <div class="app-body">
+    <aside class="app-sidebar" aria-label="Navegação principal">
+      <p class="sidebar-label">Gestão SCM</p>
+      <nav class="sidebar-nav">
+        <a routerLink="/inicio" routerLinkActive="active">Visão geral</a>
+        <a routerLink="/clientes" routerLinkActive="active">Clientes</a>
+        <a routerLink="/fornecedores" routerLinkActive="active">Fornecedores</a>
+        <a routerLink="/lancamentos" routerLinkActive="active">Lançamentos</a>
+        <a routerLink="/obrigacoes" routerLinkActive="active">Obrigações fiscais</a>
+      </nav>
+    </aside>
+    <main class="app-main"><div class="app-content"><router-outlet></router-outlet></div></main>
+  </div>
 </div>

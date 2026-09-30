@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { ButtonComponent } from '../../ui/button/button';
 
 @Component({
   selector: 'app-modal',
   standalone: true,
-  imports: [CommonModule, ButtonComponent],
+  imports: [CommonModule],
   templateUrl: './modal.component.html',
+  styleUrl: './modal.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalComponent {

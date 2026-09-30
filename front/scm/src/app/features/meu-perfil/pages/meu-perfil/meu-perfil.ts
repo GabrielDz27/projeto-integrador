@@ -9,6 +9,7 @@ import { LucideAngularModule, Star, Trophy, CalendarDays, MapPin, Lock, TrophyIc
 import Swal from 'sweetalert2';
 import { UserSessionService } from '../../../../core/auth/user-session.service';
 import { AvatarComponent } from "../../../../shared/components/avatar-usuario/avatar-usuario";
+import { NotificationService } from '../../../../shared/services/notification-service';
 
 type Conquista = {
   key: string;
@@ -37,6 +38,7 @@ export class MeuPerfilComponent implements OnInit {
   readonly LockIcon = Lock;
 
   private readonly api = inject(PerfilService);
+  private readonly notifications = inject(NotificationService);
 
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
@@ -187,11 +189,7 @@ export class MeuPerfilComponent implements OnInit {
         this.isSaving.set(false);
         this.editOpen.set(false);
 
-        Swal.fire({
-          title: "Perfil editado com sucesso!",
-          icon: "success",
-          draggable: true
-        });
+        this.notifications.success('Perfil atualizado.');
       },
       error: (err) => {
         console.error(err);
@@ -220,11 +218,7 @@ export class MeuPerfilComponent implements OnInit {
         this.api.excluirMeuPerfil().subscribe({
           next: () => {
             this.isLoading.set(false);
-            Swal.fire({
-              title: "Excluído!",
-              text: "Sua conta foi excluída.",
-              icon: "success"
-            });
+            this.notifications.success('Sua conta foi excluída.');
           },
           error: (err) => {
             console.error(err);

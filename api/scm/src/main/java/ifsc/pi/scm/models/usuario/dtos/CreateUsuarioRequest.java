@@ -28,24 +28,20 @@ public record CreateUsuarioRequest(
         )
         String cep,
 
-        @NotNull(message = "Estado é obrigatório")
+        @NotBlank(message = "Estado é obrigatório")
+        @Pattern(regexp = "^[A-Za-z]{2}$", message = "Estado deve conter 2 letras")
         String estado,
 
         @NotBlank(message = "A cidade é obrigatório")
+        @Size(max = 150, message = "A cidade deve ter no máximo 150 caracteres")
         String cidade,
 
         @NotBlank(message = "O username é obrigatório")
-        @Size(max = 60)
+        @Size(max = 50, message = "O username deve ter no máximo 50 caracteres")
         String username,
 
         @NotBlank(message = "A senha é obrigatória")
-        @Pattern.List({
-                @Pattern(regexp = ".*\\d.*", message = "A senha deve conter pelo menos um dígito (0-9)."),
-                @Pattern(regexp = ".*[a-z].*", message = "A senha deve conter pelo menos uma letra minúscula (a-z)."),
-                @Pattern(regexp = ".*[A-Z].*", message = "A senha deve conter pelo menos uma letra maiúscula (A-Z)."),
-                @Pattern(regexp = ".*[\\$*&@#].*", message = "A senha deve conter pelo menos um caractere especial: $, *, &, @ ou #."),
-                @Pattern(regexp = "^[0-9a-zA-Z\\$*&@#]+$", message = "A senha contém caracteres não permitidos. Use apenas letras, números e $, *, &, @ ou #.")
-        })
+        @Size(min = 6, message = "A senha deve ter pelo menos 6 caracteres")
         String senha,
 
         String avatarUrl

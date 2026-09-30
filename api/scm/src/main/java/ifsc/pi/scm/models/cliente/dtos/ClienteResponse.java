@@ -17,6 +17,7 @@ public record ClienteResponse(
         String cidade,
         String estado,
         String cep,
+        Boolean ativo,
         LocalDateTime dataCadastro
 ) {
     public ClienteResponse(Cliente cliente) {
@@ -31,6 +32,7 @@ public record ClienteResponse(
                 cliente.getCidade(),
                 cliente.getEstado(),
                 cliente.getCep(),
+                cliente.getAtivo(),
                 cliente.getDataCadastro()
         );
     }

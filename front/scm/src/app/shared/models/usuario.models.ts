@@ -6,19 +6,18 @@ export interface UsuarioPerfilVM {
   estado: string;
   cidade: string;
   username: string;
-  biografia: string;
+  biografia?: string;
   avatarUrl?: string;
 };
 
 export type CreateUsuarioDTO = {
   nome: string;
   email: string;
-  telefone: string;
-  cep: string;
+  telefone?: string;
+  cep?: string;
   estado: string;
   cidade: string;
   username: string;
-  biografia: string;
   senha: string;
   avatarUrl?: string;
 };
@@ -44,7 +43,7 @@ export type DetailUsuarioResponseDTO = {
   estado: string;
   cidade: string;
   username: string;
-  biografia: string;
+  biografia?: string;
   avatarUrl?: string;
 };
 

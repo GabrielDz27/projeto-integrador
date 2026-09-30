@@ -13,10 +13,11 @@
           formControlName="login"
           autocomplete="username"
           placeholder="Username"
+          [class.input-invalid]="form.controls.login.touched && form.controls.login.invalid"
           class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600"
         />
         @if (form.controls.login.touched && form.controls.login.invalid) {
-          <p class="mt-2 text-sm text-red-600">Informe um login válido (mínimo 3 caracteres).</p>
+          <p class="mt-2 text-sm text-red-600">Informe seu login.</p>
         }
       </div>
 
@@ -33,11 +34,12 @@
           formControlName="senha"
           autocomplete="current-password"
           placeholder="••••••••"
+          [class.input-invalid]="form.controls.senha.touched && form.controls.senha.invalid"
           class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600"
         />
 
         @if (form.controls.senha.touched && form.controls.senha.invalid) {
-          <p class="mt-2 text-sm text-red-600">Informe uma senha válida (mínimo 6 caracteres).</p>
+          <p class="mt-2 text-sm text-red-600">Informe sua senha.</p>
         }
       </div>
 
@@ -47,14 +49,9 @@
         </div>
       }
 
-      <app-button
-        type="submit"
-        variant="primary"
-        [disabled]="isSubmitting() || form.invalid"
-        [fullWidth]="true"
-      >
+      <button class="login-submit" type="submit" [disabled]="isSubmitting() || form.invalid">
         {{ isSubmitting() ? 'Entrando...' : 'Entrar' }}
-      </app-button>
+      </button>
 
       <p class="mt-3 text-sm text-slate-600 text-center">
         Ainda não possui conta?

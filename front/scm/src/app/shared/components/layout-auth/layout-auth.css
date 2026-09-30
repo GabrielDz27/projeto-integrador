@@ -1,0 +1,12 @@
+:host { display: block; min-height: 100%; }
+.auth-layout { display: grid; grid-template-columns: minmax(320px, .85fr) minmax(420px, 1.15fr); min-height: 100dvh; background: var(--background-color); }
+.auth-intro { display: grid; place-items: center; padding: 56px clamp(28px, 6vw, 88px); background: linear-gradient(145deg, #172554, #1d4ed8); color: #fff; }
+.intro-content { width: min(100%, 500px); }
+.brand-mark { display: inline-block; padding: 7px 11px; border: 1px solid rgb(255 255 255 / 28%); border-radius: 5px; color: #dbeafe; font-size: .72rem; font-weight: 800; letter-spacing: .08em; }
+.intro-content h1 { margin-top: 26px; color: #fff; font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1.08; }
+.intro-content > p { margin-top: 18px; color: #dbeafe; font-size: 1rem; }
+.intro-content ul { display: grid; gap: 13px; margin-top: 34px; list-style: none; }
+.intro-content li { display: flex; align-items: start; gap: 10px; color: #eff6ff; font-size: .92rem; }
+.intro-content li span { display: grid; place-items: center; flex: 0 0 20px; height: 20px; border-radius: 50%; background: #bfdbfe; color: #1e3a8a; font-size: .75rem; font-weight: 900; }
+.auth-form-area { display: grid; place-items: center; min-width: 0; padding: 40px clamp(20px, 5vw, 80px); overflow-y: auto; }
+@media (max-width: 800px) { .auth-layout { grid-template-columns: 1fr; } .auth-intro { min-height: 300px; padding: 38px 24px; } .intro-content h1 { font-size: 2rem; } .intro-content ul { gap: 8px; margin-top: 22px; } .auth-form-area { padding: 28px 16px 44px; } }

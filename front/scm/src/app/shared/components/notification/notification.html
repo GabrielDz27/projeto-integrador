@@ -1,0 +1,11 @@
+@if (notifications.current(); as toast) {
+<section class="toast" [class.toast-success]="toast.type === 'success'" [class.toast-error]="toast.type === 'error'"
+  [attr.role]="toast.type === 'error' ? 'alert' : 'status'" aria-live="polite">
+  <span class="toast-icon" aria-hidden="true">{{ toast.type === 'success' ? '✓' : '!' }}</span>
+  <div class="toast-content">
+    <strong>{{ toast.title }}</strong>
+    <p>{{ toast.message }}</p>
+  </div>
+  <button type="button" aria-label="Fechar notificação" (click)="notifications.dismiss()">×</button>
+</section>
+}
