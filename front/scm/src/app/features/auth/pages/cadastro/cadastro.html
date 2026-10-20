@@ -8,6 +8,7 @@
       <h2>Criar conta</h2>
       <p>Preencha seus dados para começar a usar o Sistema de Gestão Simplificada.</p>
     </div>
+    @if (apiError()) { <div class="server-errors" role="alert">{{ apiError() }}</div> }
     <app-usuario-form [submitting]="isSubmitting()" (submitForm)="onSubmit($event)"></app-usuario-form>
   </div>
 </app-layout-auth>

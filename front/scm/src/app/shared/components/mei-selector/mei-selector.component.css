@@ -1,0 +1,24 @@
+:host { display: block; min-width: 0; }
+
+.client-filter { display: grid; min-width: 220px; gap: 5px; color: var(--text-muted); font-size: .75rem; font-weight: 700; }
+.selector-control { display: grid; grid-template-columns: minmax(0, 1fr) 42px; gap: 6px; }
+.selector-control input, .modal-search input { width: 100%; min-width: 0; height: 42px; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--surface-color); color: var(--text-color); font: inherit; font-size: .86rem; font-weight: 400; }
+.selector-control input:focus, .modal-search input:focus { border-color: var(--primary-color); outline: 0; box-shadow: 0 0 0 3px rgb(29 78 216 / 12%); }
+.selector-control input:disabled { background: var(--surface-muted); color: var(--text-muted); }
+.search-trigger { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--surface-color); color: var(--text-color); cursor: pointer; }
+.search-trigger:hover:not(:disabled) { background: var(--surface-muted); }
+.search-trigger:focus-visible { outline: 3px solid rgb(29 78 216 / 22%); outline-offset: 2px; }
+.search-trigger:disabled { opacity: .5; cursor: not-allowed; }
+.search-icon { position: relative; width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 50%; }
+.search-icon::after { position: absolute; right: -6px; bottom: -4px; width: 7px; height: 2px; background: currentColor; content: ""; transform: rotate(48deg); transform-origin: left center; }
+.search-modal { display: grid; gap: 14px; }
+.modal-search { display: grid; gap: 6px; color: var(--text-color); font-size: .82rem; font-weight: 700; }
+.result-list { display: grid; max-height: min(48vh, 420px); overflow: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+.result-option { display: grid; gap: 3px; padding: 11px 13px; border: 0; border-bottom: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); text-align: left; cursor: pointer; }
+.result-option:last-child { border-bottom: 0; }
+.result-option:hover, .result-option:focus-visible { background: var(--surface-muted); outline: 0; }
+.result-option strong { font-size: .86rem; }
+.result-option span { color: var(--text-muted); font-size: .76rem; font-weight: 400; }
+.result-option.unassigned { background: #fffbeb; }
+.no-results { padding: 16px; color: var(--text-muted); font-size: .84rem; }
+@media (max-width: 700px) { .client-filter { min-width: 0; } }

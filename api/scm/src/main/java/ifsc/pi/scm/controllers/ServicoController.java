@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping({"/api/v1/servicos", "/servicos"})
@@ -22,8 +23,12 @@ public class ServicoController {
     private ServicoService servicoService;
 
     @GetMapping
-    public ResponseEntity<Page<ServicoResponse>> listar(@PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(servicoService.listar(pageable));
+    public ResponseEntity<Page<ServicoResponse>> listar(@RequestParam(required = false) String busca,
+                                                        @RequestParam(required = false) Boolean ativo,
+                                                        @RequestParam(required = false) BigDecimal precoMin,
+                                                        @RequestParam(required = false) BigDecimal precoMax,
+                                                        @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
+        return ResponseEntity.ok(servicoService.listar(busca, ativo, precoMin, precoMax, pageable));
     }
 
     @GetMapping("/{id}")

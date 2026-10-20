@@ -10,6 +10,10 @@ import { NumericMaskDirective } from '../../../../shared/directives/numeric-mask
 import { trimmedRequired } from '../../../../shared/utils/form-validators';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { ESTADOS_BRASILEIROS } from '../../../../shared/models/estados-brasileiros';
+import { CsvExportModalComponent, CsvExportOptions, ExportColumnOption, ExportFilterField } from '../../../../shared/components/csv-export-modal/csv-export-modal.component';
+import { CsvColumn, CsvExportService, PagedResult } from '../../../../shared/services/csv-export-service';
+import { applyApiFieldErrors, describeApiFieldErrors } from '../../../../shared/utils/http-error';
+import { FilterToolbarComponent, FilterToolbarChange, FilterToolbarField } from '../../../../shared/components/filter-toolbar/filter-toolbar.component';
 
 interface Fornecedor {
   id: string;
@@ -28,11 +32,11 @@ interface Fornecedor {
 @Component({
   selector: 'app-fornecedor-lista',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ModalComponent, NumericMaskDirective, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, ModalComponent, NumericMaskDirective, PaginationComponent, CsvExportModalComponent, FilterToolbarComponent],
   template: `
     <section class="page">
       <header class="page-header"><div><p class="eyebrow">Cadastros</p><h1>Fornecedores</h1><span>Fornecedores e prestadores relacionados ao negócio.</span></div><button type="button" (click)="novo()">Novo fornecedor</button></header>
-      <div class="toolbar"><input [value]="busca" (input)="buscar($any($event.target).value)" placeholder="Buscar por razão social, nome ou CNPJ" aria-label="Buscar fornecedores"></div>
+      <app-filter-toolbar ariaLabel="Filtros de fornecedores" [fields]="toolbarFields" [values]="filtrosAtuais()" (filterChange)="alterarFiltro($event)" (clear)="limparFiltros()" (export)="exportOpen = true"></app-filter-toolbar>
       <div class="layout">
         <div class="panel table-wrap"><table><thead><tr><th>Razão social</th><th>CNPJ</th><th>Contato</th><th>Status</th><th></th></tr></thead><tbody>
           @for (fornecedor of fornecedores; track fornecedor.id) { <tr><td><strong>{{ fornecedor.razaoSocial }}</strong><small>{{ fornecedor.nomeFantasia }}</small></td><td>{{ fornecedor.cnpj }}</td><td>{{ fornecedor.email || 'Sem e-mail' }}</td><td><span [class.inactive]="!fornecedor.ativo">{{ fornecedor.ativo ? 'Ativo' : 'Inativo' }}</span></td><td class="actions"><button type="button" class="secondary" (click)="editar(fornecedor)">Editar</button><button type="button" (click)="alterarStatus(fornecedor)">{{ fornecedor.ativo ? 'Desativar' : 'Ativar' }}</button></td></tr> }
@@ -42,6 +46,7 @@ interface Fornecedor {
     </section>
     <app-modal [open]="editando" (openChange)="editando = $event" [title]="form.value.id ? 'Editar fornecedor' : 'Novo fornecedor'" description="Dados cadastrais do fornecedor." [primaryLabel]="saving ? 'Salvando...' : 'Salvar fornecedor'" [primaryDisabled]="form.invalid || saving" (primary)="salvar()" (secondary)="fecharModal()">
       <form class="form" [formGroup]="form" (ngSubmit)="salvar()">
+        @if (errosServidor.length) { <div class="server-errors" role="alert"><strong>Revise os dados informados:</strong>@for (erro of errosServidor; track erro) { <p>{{ erro }}</p> }</div> }
         <label>Razão social *<input formControlName="razaoSocial" autocomplete="organization" maxlength="150" [class.input-invalid]="form.controls.razaoSocial.touched && form.controls.razaoSocial.invalid"></label>
         <div class="row"><label>Nome fantasia<input formControlName="nomeFantasia" maxlength="150"></label><label>CNPJ *<input formControlName="cnpj" appNumericMask="cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" [class.input-invalid]="form.controls.cnpj.touched && form.controls.cnpj.invalid"></label></div>
         <div class="row"><label>E-mail<input formControlName="email" type="email" autocomplete="email" maxlength="150" [class.input-invalid]="form.controls.email.touched && form.controls.email.invalid"></label><label>Telefone<input formControlName="telefone" appNumericMask="telefone" inputmode="numeric" maxlength="15" placeholder="(00) 00000-0000" [class.input-invalid]="form.controls.telefone.touched && form.controls.telefone.invalid"></label></div>
@@ -49,6 +54,7 @@ interface Fornecedor {
         <div class="row"><label>Cidade<input formControlName="cidade" autocomplete="address-level2" maxlength="100"></label><label>UF<select formControlName="estado" autocomplete="address-level1" [class.input-invalid]="form.controls.estado.touched && form.controls.estado.invalid"><option value="">Selecione</option>@for (estado of estados; track estado.uf) { <option [value]="estado.uf">{{ estado.nome }}</option> }</select></label><label>CEP<input formControlName="cep" appNumericMask="cep" inputmode="numeric" maxlength="9" placeholder="00000-000" autocomplete="postal-code" [class.input-invalid]="form.controls.cep.touched && form.controls.cep.invalid"></label></div>
       </form>
     </app-modal>
+    <app-csv-export-modal [open]="exportOpen" (openChange)="exportOpen = $event" [initialFilters]="filtrosAtuais()" [filterFields]="filterFields" [columnOptions]="columnOptions" (exportCsv)="exportar($event)"></app-csv-export-modal>
   `,
   styles: [`:host{display:block;padding:32px}.page{max-width:1180px;margin:auto}.page-header{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:24px}.page-header span{display:block;margin-top:6px;color:var(--text-muted);font-size:.9rem}h1{margin:0;font-size:1.8rem;color:var(--text-color)}.eyebrow{margin:0 0 6px;color:var(--primary-color);text-transform:uppercase;font-size:.72rem;font-weight:800}.toolbar{margin-bottom:16px}.toolbar input{width:100%;padding:12px 14px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:#fff;font:inherit}.layout{display:block}.panel{background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-sm)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--border-color);white-space:nowrap}th{font-size:.72rem;color:var(--text-muted);text-transform:uppercase}tbody tr:last-child td{border-bottom:0}small{display:block;color:var(--text-muted);margin-top:3px}td span{color:var(--success-color);font-size:13px;font-weight:700}.inactive{color:var(--warning-color)!important}.actions{white-space:nowrap}.actions button+button{margin-left:6px}button{border:0;border-radius:var(--radius-sm);background:var(--primary-color);color:#fff;padding:9px 12px;font:inherit;font-weight:650;cursor:pointer}button:hover{background:var(--primary-hover)}button:focus-visible{outline:3px solid rgb(29 78 216 / 28%);outline-offset:2px}button:disabled{opacity:.45;cursor:not-allowed}.actions button{padding:7px 10px;font-size:12px}.actions button:first-child,.actions button:last-child{background:var(--surface-muted);color:var(--text-color)}.actions button:hover{background:#e2e8f0}.form{display:grid;gap:14px}.form label{display:grid;gap:6px;font-size:.84rem;font-weight:650;color:var(--text-color)}.form input,.form select{width:100%;min-width:0;padding:10px 11px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:#fff;font:inherit;font-weight:400}.form input:focus,.form select:focus{border-color:var(--primary-color);outline:0;box-shadow:0 0 0 3px rgb(29 78 216 / 12%)}.form input.input-invalid,.form select.input-invalid{border-color:#dc2626}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.empty{text-align:center;color:var(--text-muted);padding:28px}@media(max-width:800px){:host{padding:20px 16px}.page-header{align-items:stretch;flex-direction:column}.row{grid-template-columns:1fr 1fr}}`]
 })
@@ -57,25 +63,79 @@ export class FornecedorListaComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly fb = inject(FormBuilder);
   private readonly notifications = inject(NotificationService);
+  private readonly csv = inject(CsvExportService);
   readonly apiUrl = `${environment.apiUrl}/api/v1/fornecedores`;
   readonly estados = ESTADOS_BRASILEIROS;
   fornecedores: Fornecedor[] = [];
   busca = '';
+  filtroAtivo = '';
+  filtroCidade = '';
+  filtroEstado = '';
+  exportOpen = false;
   pagina = 0;
   readonly tamanhoPagina = 10;
   totalRegistros = 0;
+  private debounceId: ReturnType<typeof setTimeout> | null = null;
+  readonly filterFields: ExportFilterField[] = [
+    { key: 'busca', label: 'Razão social, fantasia ou CNPJ', type: 'text' },
+    { key: 'ativo', label: 'Situação', type: 'select', options: [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }] },
+    { key: 'cidade', label: 'Cidade', type: 'text' },
+    { key: 'estado', label: 'UF', type: 'select', options: ESTADOS_BRASILEIROS.map(estado => ({ value: estado.uf, label: estado.uf })) },
+  ];
+  readonly toolbarFields: FilterToolbarField[] = [
+    { key: 'busca', label: 'Buscar fornecedor', type: 'text', placeholder: 'Razão social, fantasia ou CNPJ' },
+    { key: 'ativo', label: 'Situação', type: 'select', options: [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }] },
+    { key: 'cidade', label: 'Cidade', type: 'text' },
+    { key: 'estado', label: 'UF', type: 'select', options: ESTADOS_BRASILEIROS.map(estado => ({ value: estado.uf, label: estado.uf })) },
+  ];
+  readonly columnOptions: ExportColumnOption[] = [
+    { key: 'razaoSocial', label: 'Razão social', selected: true }, { key: 'nomeFantasia', label: 'Nome fantasia', selected: true },
+    { key: 'cnpj', label: 'CNPJ', selected: true }, { key: 'email', label: 'E-mail', selected: true }, { key: 'telefone', label: 'Telefone', selected: false },
+    { key: 'cidade', label: 'Cidade', selected: false }, { key: 'estado', label: 'UF', selected: false }, { key: 'status', label: 'Situação', selected: true },
+  ];
+  readonly csvColumns: CsvColumn[] = this.columnOptions.map(({ key, label }) => ({ key, label }));
   editando = false;
   saving = false;
+  errosServidor: string[] = [];
   form = this.fb.group({ id: [''], razaoSocial: ['', [trimmedRequired, Validators.maxLength(150)]], nomeFantasia: ['', Validators.maxLength(150)], cnpj: ['', [trimmedRequired, Validators.pattern(/^\d{14}$/)]], email: ['', [Validators.email, Validators.maxLength(150)]], telefone: ['', Validators.pattern(/^$|^\d{10,11}$/)], endereco: ['', Validators.maxLength(200)], cidade: ['', Validators.maxLength(100)], estado: ['', Validators.pattern(/^[a-zA-Z]{2}$/)], cep: ['', Validators.pattern(/^\d{8}$/)] });
 
   ngOnInit() { if (isPlatformBrowser(this.platformId)) this.carregar(); }
-  carregar() { const params: Record<string, string | number> = { page: this.pagina, size: this.tamanhoPagina, sort: 'razaoSocial,asc' }; if (this.busca.trim()) params['busca'] = this.busca.trim(); this.http.get<{ content: Fornecedor[]; totalElements: number }>(this.apiUrl, { params }).subscribe(res => { this.fornecedores = res.content ?? []; this.totalRegistros = res.totalElements ?? 0; }); }
-  buscar(valor: string) { this.busca = valor; this.carregar(); }
+  carregar() { const params: Record<string, string | number> = { page: this.pagina, size: this.tamanhoPagina, sort: 'razaoSocial,asc' }; if (this.busca.trim()) params['busca'] = this.busca.trim(); if (this.filtroAtivo) params['ativo'] = this.filtroAtivo; if (this.filtroCidade.trim()) params['cidade'] = this.filtroCidade.trim(); if (this.filtroEstado) params['estado'] = this.filtroEstado; this.http.get<{ content: Fornecedor[]; totalElements: number }>(this.apiUrl, { params }).subscribe(res => { this.fornecedores = res.content ?? []; this.totalRegistros = res.totalElements ?? 0; }); }
+  buscar(valor: string) { this.busca = valor; this.pagina = 0; if (this.debounceId) clearTimeout(this.debounceId); this.debounceId = setTimeout(() => this.carregar(), 300); }
+  filtrarAtivo(value: string) { this.filtroAtivo = value; this.pagina = 0; this.carregar(); }
+  filtrarCidade(value: string) { this.filtroCidade = value; this.pagina = 0; if (this.debounceId) clearTimeout(this.debounceId); this.debounceId = setTimeout(() => this.carregar(), 300); }
+  filtrarEstado(value: string) { this.filtroEstado = value; this.pagina = 0; this.carregar(); }
+  limparFiltros() { this.busca = ''; this.filtroAtivo = ''; this.filtroCidade = ''; this.filtroEstado = ''; this.pagina = 0; this.carregar(); }
+  filtrosAtuais(): Record<string, string> { return { busca: this.busca, ativo: this.filtroAtivo, cidade: this.filtroCidade, estado: this.filtroEstado }; }
+  alterarFiltro({ key, value }: FilterToolbarChange): void {
+    if (key === 'busca') this.buscar(value);
+    else if (key === 'ativo') this.filtrarAtivo(value);
+    else if (key === 'cidade') this.filtrarCidade(value);
+    else if (key === 'estado') this.filtrarEstado(value);
+  }
   mudarPagina(pagina: number) { this.pagina = pagina; this.carregar(); }
   novo() { this.form.reset(); this.editando = true; }
   editar(fornecedor: Fornecedor) { this.form.reset({ id: fornecedor.id, razaoSocial: fornecedor.razaoSocial, nomeFantasia: fornecedor.nomeFantasia ?? '', cnpj: fornecedor.cnpj, email: fornecedor.email ?? '', telefone: fornecedor.telefone?.replace(/\D/g, '') ?? '', endereco: fornecedor.endereco ?? '', cidade: fornecedor.cidade ?? '', estado: fornecedor.estado ?? '', cep: fornecedor.cep?.replace(/\D/g, '') ?? '' }); this.editando = true; }
   fecharModal() { this.editando = false; }
-  salvar() { if (this.form.invalid || this.saving) { this.form.markAllAsTouched(); return; } const valor = this.form.getRawValue(); const atualizando = !!valor.id; const { id, ...campos } = valor; const ativo = this.fornecedores.find(fornecedor => fornecedor.id === id)?.ativo ?? true; const payload = { ...campos, razaoSocial: campos.razaoSocial?.trim(), nomeFantasia: campos.nomeFantasia?.trim() || undefined, cnpj: campos.cnpj?.replace(/\D/g, ''), email: campos.email?.trim() || undefined, telefone: campos.telefone?.replace(/\D/g, '') || undefined, endereco: campos.endereco?.trim() || undefined, cidade: campos.cidade?.trim() || undefined, estado: campos.estado?.trim().toUpperCase() || undefined, cep: campos.cep?.replace(/\D/g, '') || undefined, ativo }; const request = atualizando ? this.http.put(`${this.apiUrl}/${id}`, payload) : this.http.post(this.apiUrl, payload); this.saving = true; request.subscribe({ next: () => { this.saving = false; this.editando = false; this.carregar(); this.notifications.success(atualizando ? 'Fornecedor atualizado.' : 'Fornecedor cadastrado.'); }, error: () => this.saving = false }); }
+  salvar() { if (this.form.invalid || this.saving) { this.form.markAllAsTouched(); return; } const valor = this.form.getRawValue(); const atualizando = !!valor.id; const { id, ...campos } = valor; const ativo = this.fornecedores.find(fornecedor => fornecedor.id === id)?.ativo ?? true; const payload = { ...campos, razaoSocial: campos.razaoSocial?.trim(), nomeFantasia: campos.nomeFantasia?.trim() || undefined, cnpj: campos.cnpj?.replace(/\D/g, ''), email: campos.email?.trim() || undefined, telefone: campos.telefone?.replace(/\D/g, '') || undefined, endereco: campos.endereco?.trim() || undefined, cidade: campos.cidade?.trim() || undefined, estado: campos.estado?.trim().toUpperCase() || undefined, cep: campos.cep?.replace(/\D/g, '') || undefined, ativo }; const request = atualizando ? this.http.put(`${this.apiUrl}/${id}`, payload) : this.http.post(this.apiUrl, payload); this.saving = true; this.errosServidor = []; request.subscribe({ next: () => { this.saving = false; this.editando = false; this.carregar(); this.notifications.success(atualizando ? 'Fornecedor atualizado.' : 'Fornecedor cadastrado.'); }, error: error => { this.saving = false; this.errosServidor = describeApiFieldErrors(applyApiFieldErrors(this.form, error)); } }); }
   desativar(fornecedor: Fornecedor) { this.http.delete(`${this.apiUrl}/${fornecedor.id}`).subscribe(() => { this.carregar(); this.notifications.success('Fornecedor desativado.'); }); }
   alterarStatus(fornecedor: Fornecedor) { if (fornecedor.ativo) { this.desativar(fornecedor); return; } const { id: _id, ...payload } = fornecedor; this.http.put(`${this.apiUrl}/${fornecedor.id}`, { ...payload, ativo: true }).subscribe(() => { this.carregar(); this.notifications.success('Fornecedor reativado.'); }); }
+  exportar(options: CsvExportOptions): void {
+    const filters = options.filters;
+    const loadPage = (page: number) => {
+      const params: Record<string, string | number> = { page, size: 100, sort: 'razaoSocial,asc' };
+      for (const key of ['busca', 'ativo', 'cidade', 'estado']) if (filters[key]?.trim()) params[key] = filters[key].trim();
+      return this.http.get<PagedResult<Fornecedor>>(this.apiUrl, { params });
+    };
+    this.csv.loadAllPages(loadPage).subscribe({
+      next: rows => {
+        if (!rows.length) { this.notifications.error('Nenhum fornecedor corresponde aos filtros da exportação.'); return; }
+        const exportRows = rows.map(item => ({ razaoSocial: item.razaoSocial, nomeFantasia: item.nomeFantasia ?? '', cnpj: item.cnpj, email: item.email ?? '', telefone: item.telefone ?? '', cidade: item.cidade ?? '', estado: item.estado ?? '', status: item.ativo ? 'Ativo' : 'Inativo' }));
+        this.csv.download('fornecedores', this.csvColumns.filter(column => options.columns.includes(column.key)), exportRows);
+        this.exportOpen = false;
+        this.notifications.success(`${rows.length} fornecedores exportados.`);
+      },
+      error: () => this.notifications.error('Não foi possível exportar os fornecedores.'),
+    });
+  }
 }

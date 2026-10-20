@@ -46,6 +46,7 @@
     <input type="text" formControlName="nome" placeholder="Seu nome completo"
       [class.input-invalid]="form.controls.nome.touched && form.controls.nome.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+    @if (form.controls.nome.errors?.['server']) { <p class="field-error">{{ form.controls.nome.errors?.['server'] }}</p> }
   </div>
 
   <!-- Email -->
@@ -54,6 +55,7 @@
     <input type="email" formControlName="email" placeholder="seuemail@exemplo.com"
       [class.input-invalid]="form.controls.email.touched && form.controls.email.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+    @if (form.controls.email.errors?.['server']) { <p class="field-error">{{ form.controls.email.errors?.['server'] }}</p> }
   </div>
 
   <!-- Telefone / CEP -->
@@ -63,6 +65,7 @@
       <input type="tel" formControlName="telefone" appNumericMask="telefone" inputmode="numeric" maxlength="15" placeholder="(00) 00000-0000"
         [class.input-invalid]="form.controls.telefone.touched && form.controls.telefone.invalid"
         class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+      @if (form.controls.telefone.errors?.['server']) { <p class="field-error">{{ form.controls.telefone.errors?.['server'] }}</p> }
     </div>
 
     <div>
@@ -70,6 +73,7 @@
       <input type="text" formControlName="cep" appNumericMask="cep" inputmode="numeric" maxlength="9" placeholder="00000-000"
         [class.input-invalid]="form.controls.cep.touched && form.controls.cep.invalid"
         class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+      @if (form.controls.cep.errors?.['server']) { <p class="field-error">{{ form.controls.cep.errors?.['server'] }}</p> }
     </div>
   </div>
 
@@ -85,6 +89,7 @@
         <option [value]="estado.uf">{{ estado.nome }}</option>
         }
       </select>
+      @if (form.controls.estado.errors?.['server']) { <p class="field-error">{{ form.controls.estado.errors?.['server'] }}</p> }
     </div>
 
     <div>
@@ -92,6 +97,7 @@
       <input type="text" formControlName="cidade" placeholder="Sua cidade"
         [class.input-invalid]="form.controls.cidade.touched && form.controls.cidade.invalid"
         class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+      @if (form.controls.cidade.errors?.['server']) { <p class="field-error">{{ form.controls.cidade.errors?.['server'] }}</p> }
     </div>
   </div>
 
@@ -101,6 +107,7 @@
     <input type="text" formControlName="username" placeholder="Escolha um usuário para entrar no SCM"
       [class.input-invalid]="form.controls.username.touched && form.controls.username.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+    @if (form.controls.username.errors?.['server']) { <p class="field-error">{{ form.controls.username.errors?.['server'] }}</p> }
   </div>
 
   <!-- Senha -->
@@ -117,6 +124,7 @@
     <input type="password" formControlName="senha" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"
       [class.input-invalid]="form.controls.senha.touched && form.controls.senha.invalid"
       class="mt-2 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600" />
+    @if (form.controls.senha.errors?.['server']) { <p class="field-error">{{ form.controls.senha.errors?.['server'] }}</p> }
 
     @if (modo === 'editar') {
     <p class="mt-2 text-xs text-slate-500">

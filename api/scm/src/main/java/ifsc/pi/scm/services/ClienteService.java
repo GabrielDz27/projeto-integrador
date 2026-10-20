@@ -5,6 +5,7 @@ import ifsc.pi.scm.models.cliente.Cliente;
 import ifsc.pi.scm.models.cliente.dtos.ClienteRequest;
 import ifsc.pi.scm.models.cliente.dtos.ClienteResponse;
 import ifsc.pi.scm.models.historico.HistoricoCliente;
+import ifsc.pi.scm.models.historico.dtos.HistoricoClienteResponse;
 import ifsc.pi.scm.repositorys.ClienteRepository;
 import ifsc.pi.scm.repositorys.HistoricoClienteRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -13,7 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 
@@ -30,12 +35,13 @@ public class ClienteService {
         return clienteRepository.findAll(pageable).map(ClienteResponse::new);
     }
 
-    public Page<ClienteResponse> listar(String busca, Pageable pageable) {
-        if (busca == null || busca.isBlank()) return listar(pageable);
-        String termo = busca.trim();
-        return clienteRepository.findByNomeContainingIgnoreCaseOrEmailContainingIgnoreCaseOrCpfContaining(
-                termo, termo, termo, pageable).map(ClienteResponse::new);
+    public Page<ClienteResponse> listar(String busca, Boolean ativo, String cidade, String estado, Pageable pageable) {
+        String termo = normalize(busca);
+        return clienteRepository.buscar(termo, ativo, normalize(cidade), normalize(estado), pageable)
+                .map(ClienteResponse::new);
     }
+
+    private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 
     public ClienteResponse buscarPorId(UUID id) {
         Cliente cliente = clienteRepository.findById(id)
@@ -43,11 +49,13 @@ public class ClienteService {
         return new ClienteResponse(cliente);
     }
 
-    public List<HistoricoCliente> historico(UUID id) {
+    public List<HistoricoClienteResponse> historico(UUID id) {
         if (!clienteRepository.existsById(id)) {
             throw new EntityNotFoundException("Cliente não encontrado.");
         }
-        return historicoClienteRepository.findByClienteIdOrderByDataHoraDesc(id);
+        return historicoClienteRepository.findByClienteIdOrderByDataHoraDesc(id).stream()
+                .map(HistoricoClienteResponse::new)
+                .toList();
     }
 
     @Transactional
@@ -65,7 +73,7 @@ public class ClienteService {
                 .build();
 
         Cliente salvo = clienteRepository.save(cliente);
-        registrarHistorico(salvo, "INCLUSAO", null, null, "criado", "Cadastro inicial do cliente.");
+        registrarHistorico(salvo, "INCLUSAO", "cliente", null, salvo.getNome(), "Cadastro inicial do cliente.");
         return new ClienteResponse(salvo);
     }
 
@@ -74,7 +82,7 @@ public class ClienteService {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado."));
 
-        String valorAnterior = cliente.getNome();
+        Map<String, String> valoresAnteriores = snapshot(cliente);
         cliente.setNome(request.nome());
         cliente.setCpf(request.cpf());
         cliente.setEmail(request.email());
@@ -87,7 +95,17 @@ public class ClienteService {
         if (request.ativo() != null) cliente.setAtivo(request.ativo());
 
         Cliente salvo = clienteRepository.save(cliente);
-        registrarHistorico(salvo, "ALTERACAO", "nome", valorAnterior, request.nome(), "Atualização do cliente.");
+        Map<String, String> valoresAtuais = snapshot(salvo);
+        valoresAnteriores.forEach((campo, valorAnterior) -> {
+            String valorNovo = valoresAtuais.get(campo);
+            if (!java.util.Objects.equals(valorAnterior, valorNovo)) {
+            String operacao = campo.equals("ativo")
+                ? ("false".equals(valorNovo) ? "DESATIVACAO" : "REATIVACAO")
+                : "ALTERACAO";
+            registrarHistorico(salvo, operacao, campo, valorAnterior, valorNovo,
+                campo.equals("ativo") ? "Status do cliente alterado." : "Campo do cliente atualizado.");
+            }
+        });
         return new ClienteResponse(salvo);
     }
 
@@ -96,10 +114,29 @@ public class ClienteService {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado."));
 
-        registrarHistorico(cliente, "EXCLUSAO", null, null, "cliente", "Exclusão do cliente.");
-        cliente.setAtivo(false);
-        clienteRepository.save(cliente);
+        if (Boolean.TRUE.equals(cliente.getAtivo())) {
+            cliente.setAtivo(false);
+            Cliente salvo = clienteRepository.save(cliente);
+            registrarHistorico(salvo, "DESATIVACAO", "ativo", "true", "false", "Cliente desativado logicamente.");
+        }
     }
+
+    private Map<String, String> snapshot(Cliente cliente) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("nome", asText(cliente.getNome()));
+        values.put("cpf", asText(cliente.getCpf()));
+        values.put("email", asText(cliente.getEmail()));
+        values.put("telefone", asText(cliente.getTelefone()));
+        values.put("dataNascimento", asText(cliente.getDataNascimento()));
+        values.put("endereco", asText(cliente.getEndereco()));
+        values.put("cidade", asText(cliente.getCidade()));
+        values.put("estado", asText(cliente.getEstado()));
+        values.put("cep", asText(cliente.getCep()));
+        values.put("ativo", asText(cliente.getAtivo()));
+        return values;
+    }
+
+    private String asText(Object value) { return value == null ? null : value.toString(); }
 
     private void registrarHistorico(Cliente cliente, String tipoOperacao, String campoAlterado, String valorAnterior, String valorNovo, String observacao) {
         HistoricoCliente historico = HistoricoCliente.builder()
@@ -108,10 +145,15 @@ public class ClienteService {
                 .campoAlterado(campoAlterado)
                 .valorAnterior(valorAnterior)
                 .valorNovo(valorNovo)
-                .usuario("sistema")
+                .usuario(usuarioAtual())
                 .observacao(observacao)
                 .build();
 
         historicoClienteRepository.save(historico);
+    }
+
+    private String usuarioAtual() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication == null || !authentication.isAuthenticated() ? "sistema" : authentication.getName();
     }
 }

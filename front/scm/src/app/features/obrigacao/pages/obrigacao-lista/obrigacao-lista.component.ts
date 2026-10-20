@@ -1,24 +1,31 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { environment } from '../../../../../environments/environment';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
 import { NotificationService } from '../../../../shared/services/notification-service';
 import { trimmedRequired } from '../../../../shared/utils/form-validators';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
+import { applyApiFieldErrors, describeApiFieldErrors } from '../../../../shared/utils/http-error';
+import { MeiSelectorComponent } from '../../../../shared/components/mei-selector/mei-selector.component';
 
-interface Obrigacao { id: string; competencia: string; vencimento: string; valor: number; status: 'PAGO' | 'PENDENTE'; dataPagamento?: string; }
+interface Obrigacao { id: string; competencia: string; vencimento: string; valor: number; status: 'PAGO' | 'PENDENTE'; dataPagamento?: string; idCliente: string | null; }
+interface ClienteOption { id: string; nome: string; cpf?: string; email?: string; ativo?: boolean; }
 interface CalendarDay { date: Date; inMonth: boolean; entries: Obrigacao[]; }
 
 @Component({
   selector: 'app-obrigacao-lista',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, ModalComponent, PaginationComponent],
+  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, ModalComponent, PaginationComponent, MeiSelectorComponent],
+  styleUrl: './obrigacao-lista.component.css',
   template: `
     <section class="page">
-      <header class="page-header"><div><p class="eyebrow">Obrigações fiscais</p><h1>Calendário de obrigações</h1><p>Organize vencimentos e pagamentos das guias DAS.</p></div><button type="button" (click)="novo()">Adicionar obrigação</button></header>
-      <section class="calendar panel">
+      <header class="page-header"><div><p class="eyebrow">Obrigações fiscais</p><h1>Calendário de obrigações</h1><p>Organize vencimentos e pagamentos das guias DAS.</p></div><div class="header-actions"><app-mei-selector [options]="clientes()" [selectedId]="clienteSelecionado()" [includeUnassigned]="true" (selectionChange)="selecionarCliente($event)"></app-mei-selector><button type="button" (click)="novo()" [disabled]="!clienteSelecionado() || semVinculo()">Adicionar obrigação</button></div></header>
+      @if (!clienteSelecionado()) { <div class="panel empty-selection">Selecione um cliente/MEI para consultar as obrigações fiscais.</div> }
+      @if (semVinculo()) { <div class="legacy-notice" role="status">Exibindo guias antigas sem cliente associado. Edite cada guia para atribuí-la ao MEI correto.</div> }
+      @if (clienteSelecionado()) { <section class="calendar panel">
         <div class="calendar-heading"><button class="month-nav" type="button" (click)="mudarMes(-1)" aria-label="Mês anterior">‹</button><h2>{{ tituloMes() }}</h2><button class="month-nav" type="button" (click)="mudarMes(1)" aria-label="Próximo mês">›</button></div>
         <div class="calendar-grid calendar-weekdays">@for (dia of diasSemana; track dia) { <span>{{ dia }}</span> }</div>
         <div class="calendar-grid calendar-days">@for (day of calendario(); track day.date.toISOString()) {
@@ -33,10 +40,12 @@ interface CalendarDay { date: Date; inMonth: boolean; entries: Obrigacao[]; }
           @for (item of obrigacoesOrdenadas(); track item.id) {<tr><td>{{ item.competencia }}</td><td>{{ item.vencimento | date:'dd/MM/yyyy' }}</td><td>{{ item.valor | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td><td><span class="status" [class.status-paid]="item.status === 'PAGO'" [class.status-overdue]="estaVencida(item)">{{ statusLabel(item) }}</span></td><td class="actions"><button class="secondary" type="button" (click)="editar(item)">Editar</button><button class="danger" type="button" (click)="excluir(item)">Excluir</button></td></tr>}
           @empty {<tr><td class="empty" colspan="5">{{ carregando() ? 'Carregando obrigações...' : 'Nenhuma guia cadastrada.' }}</td></tr>}
         </tbody></table><app-pagination [page]="pagina()" [size]="tamanhoPagina" [total]="totalRegistros()" (pageChange)="mudarPagina($event)"></app-pagination></div>
-      </section>
+      </section> }
     </section>
     <app-modal [open]="modalOpen()" (openChange)="modalOpen.set($event)" [title]="editando() ? 'Editar obrigação' : 'Adicionar obrigação'" description="Registre os dados da guia DAS." [primaryLabel]="salvando() ? 'Salvando...' : 'Salvar guia'" [primaryDisabled]="form.invalid || salvando()" (primary)="salvar()" (secondary)="modalOpen.set(false)">
       <form class="obligation-form" [formGroup]="form" (ngSubmit)="salvar()">
+        @if (errosServidor.length) { <div class="server-errors" role="alert"><strong>Revise os dados informados:</strong>@for (erro of errosServidor; track erro) { <p>{{ erro }}</p> }</div> }
+        <label>Cliente/MEI *<select formControlName="idCliente" [class.input-invalid]="form.controls.idCliente.touched && form.controls.idCliente.invalid"><option value="">Selecione o cliente</option>@for (cliente of clientes(); track cliente.id) { <option [value]="cliente.id">{{ cliente.nome }}</option> }</select></label>
         <div class="form-row"><label>Competência *<input type="month" formControlName="competencia" [class.input-invalid]="form.controls.competencia.touched && form.controls.competencia.invalid"></label><label>Vencimento *<input type="date" formControlName="vencimento" [class.input-invalid]="form.controls.vencimento.touched && form.controls.vencimento.invalid"></label></div>
         <div class="form-row"><label>Valor total (R$) *<input type="number" formControlName="valor" min="0" step="0.01" inputmode="decimal" [class.input-invalid]="form.controls.valor.touched && form.controls.valor.invalid"></label><label>Status<select formControlName="status" [class.input-invalid]="form.controls.status.touched && form.controls.status.invalid"><option value="PENDENTE">Pendente</option><option value="PAGO">Pago</option></select></label></div>
       </form>
@@ -46,9 +55,14 @@ interface CalendarDay { date: Date; inMonth: boolean; entries: Obrigacao[]; }
 })
 export class ObrigacaoListaComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
   private readonly fb = inject(FormBuilder);
   private readonly notifications = inject(NotificationService);
   private readonly apiUrl = `${environment.apiUrl}/api/v1/obrigacoes`;
+  private readonly clienteUrl = `${environment.apiUrl}/api/v1/clientes`;
+  readonly clientes = signal<ClienteOption[]>([]);
+  readonly clienteSelecionado = signal('');
+  readonly semVinculo = computed(() => this.clienteSelecionado() === '__sem_vinculo__');
   readonly obrigacoes = signal<Obrigacao[]>([]);
   readonly pagina = signal(0);
   readonly totalRegistros = signal(0);
@@ -58,10 +72,11 @@ export class ObrigacaoListaComponent implements OnInit {
   readonly modalOpen = signal(false);
   readonly editando = signal(false);
   readonly salvando = signal(false);
+  errosServidor: string[] = [];
   readonly diasSemana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   readonly mesVisivel = signal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   private editingId: string | null = null;
-  readonly form = this.fb.nonNullable.group({ competencia: ['', [trimmedRequired, Validators.pattern(/^\d{4}-(0[1-9]|1[0-2])$/)]], vencimento: ['', trimmedRequired], valor: [0, [Validators.required, Validators.min(0)]], status: ['PENDENTE' as 'PAGO' | 'PENDENTE', trimmedRequired] });
+  readonly form = this.fb.nonNullable.group({ idCliente: ['', trimmedRequired], competencia: ['', [trimmedRequired, Validators.pattern(/^\d{4}-(0[1-9]|1[0-2])$/)]], vencimento: ['', trimmedRequired], valor: [0, [Validators.required, Validators.min(0)]], status: ['PENDENTE' as 'PAGO' | 'PENDENTE', trimmedRequired] });
   readonly tituloMes = computed(() => new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(this.mesVisivel()));
   readonly calendario = computed<CalendarDay[]>(() => {
     const first = this.mesVisivel();
@@ -76,7 +91,15 @@ export class ObrigacaoListaComponent implements OnInit {
   });
   readonly obrigacoesOrdenadas = computed(() => [...this.obrigacoes()].sort((a, b) => a.vencimento.localeCompare(b.vencimento)));
 
-  ngOnInit(): void { this.carregar(); }
+  ngOnInit(): void {
+    const clienteDaRota = this.route.snapshot.queryParamMap.get('clienteId');
+    if (clienteDaRota) { this.clienteSelecionado.set(clienteDaRota); this.carregar(); }
+    this.http.get<{ content: ClienteOption[] }>(this.clienteUrl, { params: { page: 0, size: 100, sort: 'nome,asc' } }).subscribe({
+      next: response => this.clientes.set((response.content ?? []).filter(cliente => cliente.ativo !== false)),
+      error: () => this.notifications.error('Não foi possível carregar os clientes.'),
+    });
+  }
+  selecionarCliente(clienteId: string): void { this.clienteSelecionado.set(clienteId); this.pagina.set(0); this.carregar(); }
   filtrarCompetencia(competencia: string): void {
     this.filtroCompetencia = competencia;
     this.pagina.set(0);
@@ -91,29 +114,34 @@ export class ObrigacaoListaComponent implements OnInit {
   estaVencida(item: Obrigacao): boolean { return item.status !== 'PAGO' && item.vencimento < this.dateKey(new Date()); }
   statusLabel(item: Obrigacao): string { return this.estaVencida(item) ? 'Vencida' : item.status === 'PAGO' ? 'Paga' : 'Pendente'; }
   novo(): void {
+    if (!this.clienteSelecionado() || this.semVinculo()) return;
     this.editingId = null;
     this.editando.set(false);
     const today = new Date();
     const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 20);
-    this.form.reset({ competencia: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`, vencimento: this.dateKey(dueDate), valor: 0, status: 'PENDENTE' });
+    this.form.reset({ idCliente: this.clienteSelecionado(), competencia: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`, vencimento: this.dateKey(dueDate), valor: 0, status: 'PENDENTE' });
     this.modalOpen.set(true);
   }
-  editar(item: Obrigacao): void { this.editingId = item.id; this.editando.set(true); this.form.reset({ competencia: item.competencia, vencimento: item.vencimento, valor: item.valor, status: item.status }); this.modalOpen.set(true); }
+  editar(item: Obrigacao): void { this.editingId = item.id; this.editando.set(true); this.form.reset({ idCliente: item.idCliente ?? '', competencia: item.competencia, vencimento: item.vencimento, valor: item.valor, status: item.status }); this.modalOpen.set(true); }
   salvar(): void {
     if (this.form.invalid || this.salvando()) { this.form.markAllAsTouched(); return; }
     this.salvando.set(true);
     const editing = !!this.editingId;
     const request = this.editingId ? this.http.put(`${this.apiUrl}/${this.editingId}`, this.form.getRawValue()) : this.http.post(this.apiUrl, this.form.getRawValue());
-    request.subscribe({ next: () => { this.salvando.set(false); this.modalOpen.set(false); this.carregar(); this.notifications.success(editing ? 'Guia DAS atualizada.' : 'Guia DAS cadastrada.'); }, error: () => this.salvando.set(false) });
+    this.errosServidor = [];
+    request.subscribe({ next: () => { this.salvando.set(false); this.modalOpen.set(false); this.carregar(); this.notifications.success(editing ? 'Guia DAS atualizada.' : 'Guia DAS cadastrada.'); }, error: error => { this.salvando.set(false); this.errosServidor = describeApiFieldErrors(applyApiFieldErrors(this.form, error)); } });
   }
   excluir(item: Obrigacao): void { if (!confirm(`Excluir a guia ${item.competencia}?`)) return; this.http.delete(`${this.apiUrl}/${item.id}`).subscribe(() => { this.carregar(); this.notifications.success('Guia DAS excluída.'); }); }
   private carregar(): void {
+    if (!this.clienteSelecionado()) { this.obrigacoes.set([]); this.totalRegistros.set(0); return; }
     this.carregando.set(true);
     const params: Record<string, string | number> = {
       page: this.pagina(),
       size: this.tamanhoPagina,
       sort: 'vencimento,asc',
     };
+    if (this.semVinculo()) params['semVinculo'] = 'true';
+    else params['clienteId'] = this.clienteSelecionado();
     if (this.filtroCompetencia) params['competencia'] = this.filtroCompetencia;
 
     this.http.get<{ content: Obrigacao[]; totalElements: number }>(this.apiUrl, { params }).subscribe({

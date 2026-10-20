@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Service
 public class ServicoService {
@@ -19,8 +20,12 @@ public class ServicoService {
     @Autowired
     private ServicoRepository servicoRepository;
 
-    public Page<ServicoResponse> listar(Pageable pageable) {
-        return servicoRepository.findAll(pageable).map(ServicoResponse::new);
+    public Page<ServicoResponse> listar(String busca, Boolean ativo, BigDecimal precoMin, BigDecimal precoMax, Pageable pageable) {
+        if (precoMin != null && precoMax != null && precoMin.compareTo(precoMax) > 0) {
+            throw new ifsc.pi.scm.configs.exceptions.ValidacaoException("O preço mínimo não pode superar o preço máximo.");
+        }
+        String termo = busca == null || busca.isBlank() ? null : busca.trim();
+        return servicoRepository.buscar(termo, ativo, precoMin, precoMax, pageable).map(ServicoResponse::new);
     }
 
     public ServicoResponse buscarPorId(UUID id) {

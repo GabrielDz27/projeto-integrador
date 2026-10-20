@@ -10,7 +10,10 @@ export const notificationInterceptor: HttpInterceptorFn = (request, next) => {
   return next(request).pipe(
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse) {
-        notifications.error(extractApiError(error, 'Não foi possível concluir a solicitação.'));
+        const payload = typeof error.error === 'object' && error.error ? error.error as Record<string, unknown> : {};
+        const fieldErrors = payload['fieldErrors'];
+        const hasFieldErrors = !!fieldErrors && typeof fieldErrors === 'object' && Object.keys(fieldErrors).length > 0;
+        if (!hasFieldErrors) notifications.error(extractApiError(error, 'Não foi possível concluir a solicitação.'));
       }
       return throwError(() => error);
     }),

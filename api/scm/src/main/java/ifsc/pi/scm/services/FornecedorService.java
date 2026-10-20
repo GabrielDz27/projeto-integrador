@@ -20,11 +20,9 @@ public class FornecedorService {
         this.repository = repository;
     }
 
-    public Page<FornecedorResponse> listar(String busca, Pageable pageable) {
-        Page<Fornecedor> fornecedores = busca == null || busca.isBlank()
-                ? repository.findAll(pageable)
-                : repository.findByRazaoSocialContainingIgnoreCaseOrNomeFantasiaContainingIgnoreCaseOrCnpjContaining(busca, busca, busca, pageable);
-        return fornecedores.map(FornecedorResponse::new);
+    public Page<FornecedorResponse> listar(String busca, Boolean ativo, String cidade, String estado, Pageable pageable) {
+        return repository.buscar(normalize(busca), ativo, normalize(cidade), normalize(estado), pageable)
+                .map(FornecedorResponse::new);
     }
 
     public FornecedorResponse buscarPorId(UUID id) {
@@ -65,4 +63,6 @@ public class FornecedorService {
         if (request.ativo() != null) fornecedor.setAtivo(request.ativo());
         return fornecedor;
     }
+
+    private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 }

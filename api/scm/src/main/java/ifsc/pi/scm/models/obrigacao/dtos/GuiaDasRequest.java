@@ -4,13 +4,16 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record GuiaDasRequest(
         @NotBlank @Pattern(regexp = "\\d{4}-(0[1-9]|1[0-2])", message = "Competência deve estar no formato AAAA-MM") String competencia,
         @NotNull LocalDate vencimento,
         @NotNull @DecimalMin(value = "0.00", message = "O valor não pode ser negativo") BigDecimal valor,
-        @NotBlank @Pattern(regexp = "PAGO|PENDENTE", message = "Status inválido") String status
+        @NotBlank @Pattern(regexp = "PAGO|PENDENTE", message = "Status inválido") String status,
+        @NotNull(message = "Selecione o cliente/MEI da guia") UUID idCliente
 ) {}

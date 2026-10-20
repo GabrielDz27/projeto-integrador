@@ -23,9 +23,8 @@ export const autenticacaoInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 || error.status === 403) {
-        console.warn('Sessão expirada ou acesso negado. Limpando token...');
-        
+      if (error.status === 401 && token) {
+        console.warn('Sessão expirada. Limpando token...');
         tokenService.excluirToken(); 
         router.navigate(['/login']); 
       }

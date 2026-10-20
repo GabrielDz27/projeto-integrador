@@ -1,5 +1,6 @@
 package ifsc.pi.scm.models.obrigacao;
 
+import ifsc.pi.scm.models.cliente.Cliente;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +24,10 @@ public class GuiaDas {
 
     @Column(name = "periodo_apuracao", nullable = false, length = 7)
     private String competencia;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_cliente")
+    private Cliente cliente;
 
     @Column(name = "data_vencimento", nullable = false)
     private LocalDate vencimento;

@@ -21,9 +21,12 @@ public class LancamentoController {
     public LancamentoController(LancamentoService service) { this.service = service; }
 
     @GetMapping
-    public Page<LancamentoResponse> listar(@RequestParam(required = false) String busca,
+    public Page<LancamentoResponse> listar(@RequestParam UUID clienteId,
+                                            @RequestParam(required = false) String busca,
+                                            @RequestParam(required = false) String statusRecebimento,
+                                            @RequestParam(required = false) Boolean notaFiscalEmitida,
                                             @PageableDefault(size = 100) Pageable pageable) {
-        return service.listar(busca, pageable);
+        return service.listar(clienteId, busca, statusRecebimento, notaFiscalEmitida, pageable);
     }
 
     @PostMapping

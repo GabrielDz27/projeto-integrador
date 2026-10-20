@@ -5,4 +5,4 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record GuiaDasResponse(UUID id, String competencia, LocalDate vencimento, BigDecimal valor,
-                              String status, LocalDate dataPagamento) {}
+                              String status, LocalDate dataPagamento, UUID idCliente) {}

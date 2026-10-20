@@ -2,6 +2,7 @@ package ifsc.pi.scm.controllers;
 
 import ifsc.pi.scm.models.cliente.dtos.ClienteRequest;
 import ifsc.pi.scm.models.cliente.dtos.ClienteResponse;
+import ifsc.pi.scm.models.historico.dtos.HistoricoClienteResponse;
 import ifsc.pi.scm.services.ClienteService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping({"/api/v1/clientes", "/clientes"})
@@ -24,8 +26,11 @@ public class ClienteController {
 
     @GetMapping
     public ResponseEntity<Page<ClienteResponse>> listar(@RequestParam(required = false) String busca,
+                                                        @RequestParam(required = false) Boolean ativo,
+                                                        @RequestParam(required = false) String cidade,
+                                                        @RequestParam(required = false) String estado,
                                                         @PageableDefault(size = 20, sort = "nome") Pageable pageable) {
-        return ResponseEntity.ok(clienteService.listar(busca, pageable));
+        return ResponseEntity.ok(clienteService.listar(busca, ativo, cidade, estado, pageable));
     }
 
     @GetMapping("/{id}")
@@ -34,7 +39,7 @@ public class ClienteController {
     }
 
     @GetMapping("/{id}/historico")
-    public ResponseEntity<?> historico(@PathVariable UUID id) {
+    public ResponseEntity<List<HistoricoClienteResponse>> historico(@PathVariable UUID id) {
         return ResponseEntity.ok(clienteService.historico(id));
     }
 

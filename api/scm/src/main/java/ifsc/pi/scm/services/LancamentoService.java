@@ -24,10 +24,13 @@ public class LancamentoService {
         this.clienteRepository = clienteRepository;
     }
 
-    public Page<LancamentoResponse> listar(String busca, Pageable pageable) {
-        Page<Lancamento> page = busca == null || busca.isBlank()
-                ? repository.findAll(pageable)
-                : repository.findByDescricaoContainingIgnoreCase(busca, pageable);
+    public Page<LancamentoResponse> listar(UUID clienteId, String busca, String statusRecebimento,
+                                           Boolean notaFiscalEmitida, Pageable pageable) {
+        if (!clienteRepository.existsById(clienteId)) {
+            throw new EntityNotFoundException("Cliente/MEI não encontrado.");
+        }
+        String termo = busca == null || busca.isBlank() ? null : busca.trim();
+        Page<Lancamento> page = repository.buscar(clienteId, termo, statusRecebimento, notaFiscalEmitida, pageable);
         return page.map(this::toResponse);
     }
 

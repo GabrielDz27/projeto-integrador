@@ -24,8 +24,11 @@ public class FornecedorController {
 
     @GetMapping
     public Page<FornecedorResponse> listar(@RequestParam(required = false) String busca,
+                                           @RequestParam(required = false) Boolean ativo,
+                                           @RequestParam(required = false) String cidade,
+                                           @RequestParam(required = false) String estado,
                                            @PageableDefault(size = 20) Pageable pageable) {
-        return service.listar(busca, pageable);
+        return service.listar(busca, ativo, cidade, estado, pageable);
     }
 
     @GetMapping("/{id}")

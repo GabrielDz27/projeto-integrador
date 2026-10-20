@@ -5,9 +5,20 @@
       <h1>Gestão do seu negócio</h1>
       <p class="subtitle">Acompanhe recebimentos, obrigações e o limite anual do MEI.</p>
     </div>
-    <a class="primary-action" routerLink="/lancamentos">Novo lançamento</a>
+    <div class="heading-actions">
+      <app-mei-selector class="mei-picker" label="MEI selecionado" [placeholder]="carregandoClientes() ? 'Carregando clientes...' : 'Digite para buscar cliente'" [options]="clientes()" [selectedId]="clienteId()" [disabled]="carregandoClientes()" (selectionChange)="selecionarCliente($event)"></app-mei-selector>
+      @if (clienteId()) { <a class="primary-action" routerLink="/lancamentos" [queryParams]="{ clienteId: clienteId() }">Novo lançamento</a> }
+    </div>
   </header>
 
+  @if (!clienteId()) {
+    <section class="empty-selection panel" aria-live="polite">
+      <h2>Selecione um MEI para começar</h2>
+      <p>Os indicadores, lançamentos e guias DAS são apresentados separadamente para cada cliente.</p>
+      @if (!carregandoClientes() && clientes().length === 0) { <a routerLink="/clientes" class="text-action">Cadastrar primeiro cliente</a> }
+    </section>
+  } @else {
+  @if (carregando()) { <p class="loading-state" role="status">Atualizando indicadores...</p> }
   <section class="summary-grid" aria-label="Resumo financeiro e cadastros">
     <article class="summary-card"><span>Recebido no mês</span><strong>{{ moeda.format(resumo().recebidoNoMes) }}</strong><small>Valores pagos no período</small></article>
     <article class="summary-card"><span>Pendente de recebimento</span><strong>{{ moeda.format(resumo().pendenteRecebimento) }}</strong><small>Requer acompanhamento</small></article>
@@ -16,11 +27,52 @@
     <article class="summary-card"><span>Fornecedores ativos</span><strong>{{ resumo().totalFornecedores }}</strong><small>Parceiros cadastrados</small></article>
   </section>
 
+  <section class="charts-grid" aria-label="Análises financeiras dos últimos 12 meses">
+    @if (erroSerie()) { <div class="chart-error" role="alert">{{ erroSerie() }}</div> }
+    <article class="panel chart-card">
+      <div class="panel-heading"><div><p class="eyebrow">Fluxo de caixa</p><h2>Recebido x pendente</h2></div><span class="chart-period">12 meses</span></div>
+      <div class="chart-legend"><span><i class="legend-received"></i>Recebido</span><span><i class="legend-pending"></i>Pendente</span></div>
+      <div class="bar-chart" role="img" aria-label="Comparação mensal dos valores recebidos e pendentes">
+        @for (mes of mesesGrafico(); track mes.competencia) {
+          <div class="bar-month" [attr.title]="mes.competencia + ': recebido ' + moeda.format(mes.recebido) + ', pendente ' + moeda.format(mes.pendente)">
+            <div class="bar-pair"><span class="bar-received" [style.height.%]="mes.recebidoPct"></span><span class="bar-pending" [style.height.%]="mes.pendentePct"></span></div>
+            <span class="month-label">{{ mes.rotulo }}</span>
+          </div>
+        }
+      </div>
+      <p class="chart-description">Cada par compara o total recebido com o que ainda está pendente na competência.</p>
+    </article>
+
+    <article class="panel chart-card">
+      <div class="panel-heading"><div><p class="eyebrow">Limite anual</p><h2>Faturamento acumulado</h2></div><span class="chart-period">{{ resumo().faturamentoAnual / resumo().limiteAnualMei * 100 | number:'1.0-0' }}% do teto</span></div>
+      <div class="limit-chart" role="img" aria-label="Faturamento acumulado por mês comparado ao teto anual do MEI">
+        @for (mes of mesesLimite(); track mes.competencia) {
+          <div class="limit-month"><span class="month-label">{{ mes.competencia }}</span><div class="limit-track"><span class="limit-fill" [style.width.%]="mes.faturamentoPct"></span><i class="limit-marker" [style.left.%]="mes.tetoPct"></i></div><b>{{ moeda.format(mes.acumulado) }}</b></div>
+        }
+      </div>
+      <p class="chart-description">A linha vertical representa o limite anual. Alerta visual a partir de 80%.</p>
+    </article>
+
+    <article class="panel chart-card chart-card-wide">
+      <div class="panel-heading"><div><p class="eyebrow">Obrigações fiscais</p><h2>Status mensal das Guias DAS</h2></div><span class="chart-period">12 meses</span></div>
+      <div class="chart-legend"><span><i class="legend-paid"></i>Pagas</span><span><i class="legend-pending"></i>Pendentes</span><span><i class="legend-overdue"></i>Vencidas</span></div>
+      <div class="das-chart" role="img" aria-label="Quantidade de guias DAS pagas, pendentes e vencidas por mês">
+        @for (mes of serie(); track mes.competencia) {
+          <div class="das-month" [attr.title]="rotuloGuias(mes)" [attr.aria-label]="rotuloGuias(mes)">
+            <div class="das-stack"><span class="das-paid" [style.height.%]="math.max(5, mes.guiasPagas * 20)" [hidden]="mes.guiasPagas === 0"></span><span class="das-pending" [style.height.%]="math.max(5, mes.guiasPendentes * 20)" [hidden]="mes.guiasPendentes === 0"></span><span class="das-overdue" [style.height.%]="math.max(5, mes.guiasVencidas * 20)" [hidden]="mes.guiasVencidas === 0"></span></div>
+            <span class="month-label">{{ mes.competencia.slice(5) }}</span>
+          </div>
+        }
+      </div>
+      <p class="chart-description">Os totais contam guias DAS associadas ao MEI selecionado; guias antigas sem vínculo ficam fora até serem atribuídas.</p>
+    </article>
+  </section>
+
   <section class="dashboard-grid">
     <article class="panel obligation-panel">
       <div class="panel-heading"><div><p class="eyebrow">Próxima obrigação</p><h2>{{ resumo().guiaDas ? ('Guia DAS · ' + resumo().guiaDas!.competencia) : 'Nenhuma guia cadastrada' }}</h2></div>@if (resumo().guiaDas) { <span class="status status--warning">{{ statusGuia() }}</span> }</div>
       <p class="panel-copy">{{ resumo().guiaDas ? ('Vencimento em ' + (resumo().guiaDas!.vencimento | date:'dd/MM/yyyy') + '. Valor: ' + moeda.format(resumo().guiaDas!.valor)) : 'Cadastre manualmente suas guias para acompanhar vencimentos e pagamentos.' }}</p>
-      <a routerLink="/obrigacoes" class="text-action">Ver calendário de obrigações</a>
+      <a routerLink="/obrigacoes" [queryParams]="{ clienteId: clienteId() }" class="text-action">Ver calendário de obrigações</a>
     </article>
 
     <article class="panel limit-panel">
@@ -31,5 +83,6 @@
     </article>
   </section>
 
-  <section class="quick-actions panel"><div><p class="eyebrow">Acesso rápido</p><h2>Rotinas frequentes</h2></div><div class="action-list"><a routerLink="/clientes">Gerenciar clientes</a><a routerLink="/lancamentos">Registrar faturamento</a><a routerLink="/obrigacoes">Consultar DAS</a></div></section>
+  <section class="quick-actions panel"><div><p class="eyebrow">Acesso rápido</p><h2>Rotinas frequentes</h2></div><div class="action-list"><a routerLink="/clientes">Gerenciar clientes</a><a routerLink="/lancamentos" [queryParams]="{ clienteId: clienteId() }">Registrar faturamento</a><a routerLink="/obrigacoes" [queryParams]="{ clienteId: clienteId() }">Consultar DAS</a></div></section>
+  }
 </section>

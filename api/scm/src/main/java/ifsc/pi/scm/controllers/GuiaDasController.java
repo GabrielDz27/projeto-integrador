@@ -21,13 +21,15 @@ public class GuiaDasController {
     public GuiaDasController(GuiaDasService service) { this.service = service; }
 
     @GetMapping
-    public Page<GuiaDasResponse> listar(@RequestParam(required = false) String competencia,
+    public Page<GuiaDasResponse> listar(@RequestParam(required = false) UUID clienteId,
+                                         @RequestParam(defaultValue = "false") boolean semVinculo,
+                                         @RequestParam(required = false) String competencia,
                                          @PageableDefault(size = 100) Pageable pageable) {
-        return service.listar(competencia, pageable);
+        return service.listar(clienteId, semVinculo, competencia, pageable);
     }
 
     @GetMapping("/proxima")
-    public GuiaDasResponse proxima() { return service.proxima(); }
+    public GuiaDasResponse proxima(@RequestParam UUID clienteId) { return service.proxima(clienteId); }
 
     @PostMapping
     public ResponseEntity<GuiaDasResponse> criar(@Valid @RequestBody GuiaDasRequest request) {

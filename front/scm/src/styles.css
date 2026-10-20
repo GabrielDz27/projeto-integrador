@@ -26,3 +26,18 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 a { color: inherit; }
 app-root { display: block; min-height: 100%; }
+
+.server-errors {
+	display: grid;
+	gap: 5px;
+	margin: 12px 0;
+	padding: 12px 14px;
+	border: 1px solid #fecaca;
+	border-radius: var(--radius-sm);
+	background: #fef2f2;
+	color: var(--danger-color);
+	font-size: .84rem;
+}
+
+.field-error { color: var(--danger-color); font-size: .78rem; font-weight: 600; }
+.input-invalid { border-color: var(--danger-color) !important; }
