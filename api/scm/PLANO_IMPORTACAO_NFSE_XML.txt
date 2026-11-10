@@ -1,0 +1,296 @@
+PLANO DE IMPORTACAO DE NFS-e XML PARA LANCAMENTOS
+================================================
+
+Objetivo
+--------
+Definir uma primeira entrega para importar uma Nota Fiscal de Servico
+eletronica (NFS-e) em XML e criar um lancamento financeiro no SCM, com
+pre-visualizacao, confirmacao humana, protecao contra duplicidade e validacao
+do documento. Este plano descreve a NFS-e do Sistema Nacional. NF-e de produtos,
+leiautes municipais antigos e integracoes diretas com SEFAZ/municipios ficam
+para etapas futuras, pois possuem outros leiautes e regras.
+
+Decisao de escopo
+-----------------
+1. Primeira versao: um XML por vez, de uma NFS-e nacional autorizada.
+2. Aceitar o documento raiz NFSe no namespace oficial do Sistema Nacional e
+   apenas versoes cujo XSD esteja instalado e explicitamente suportado.
+3. Nao importar uma DPS isolada como se fosse uma NFS-e autorizada. DPS e uma
+   declaracao usada para gerar a NFS-e.
+4. Nao importar eventos de cancelamento/substituicao nesta primeira versao.
+   A importacao deve detectar os estados disponiveis no XML e recusar ou avisar
+   quando nao puder provar que o documento e uma nota valida para lancamento.
+5. Nao inferir recebimento pelo fato de a nota ter sido emitida. O usuario
+   confirma se o valor esta PAGO ou PENDENTE.
+6. Guardar os dados fiscais necessarios e um hash do arquivo; nao guardar o XML
+   completo por padrao. Se houver requisito de retencao, definir prazo e acesso
+   antes de armazenar o XML original.
+
+Situacao atual do projeto
+-------------------------
+Lancamento atual:
+  - descricao: String, obrigatoria, maximo 200 caracteres
+  - cliente: relacao obrigatoria com Cliente/MEI
+  - valor: BigDecimal, numeric(10,2)
+  - dataCompetencia: LocalDate
+  - statusRecebimento: PAGO ou PENDENTE
+  - notaFiscalEmitida: boolean
+
+Rotas atuais:
+  - GET    /api/v1/lancamentos?clienteId=...
+  - POST   /api/v1/lancamentos
+  - PUT    /api/v1/lancamentos/{id}
+  - DELETE /api/v1/lancamentos/{id}
+
+O modelo Lancamento nao identifica qual documento fiscal originou o registro,
+nao guarda numero/chave/hash do XML e nao tem protecao de unicidade para
+importacoes. O cadastro Cliente contem CPF, mas nao CNPJ. Como o XML identifica
+o prestador por CPF ou CNPJ, a associacao automatica do MEI emissor exige que
+o cadastro passe a guardar o documento fiscal correto. Na primeira versao, a
+tela pode exigir a escolha explicita do MEI e comparar seu documento quando
+disponivel; nao deve associar silenciosamente a nota a outro cliente.
+
+Fluxo ponta a ponta
+-------------------
+1. A pessoa escolhe um MEI e seleciona "Importar NFS-e XML" na tela de
+   lancamentos.
+2. A pessoa seleciona um arquivo .xml. A tela envia o arquivo ao backend; o
+   navegador nao e responsavel por interpretar ou validar o documento fiscal.
+3. O backend verifica tamanho, extensao como indicacao, conteudo, raiz XML,
+   namespace, versao e XSD oficial. A extensao/MIME do navegador nao e prova
+   de que o arquivo e um XML seguro ou valido.
+4. O parser identifica a NFS-e, extrai os campos e produz um DTO de previa.
+   Nenhum lancamento e gravado nesta etapa.
+5. A tela mostra os dados encontrados, o MEI escolhido, valores bruto e liquido,
+   competencia, prestador e tomador. Informa campos ausentes, divergencias de
+   documento e possivel duplicidade.
+6. A pessoa confere a previa, escolhe PAGO ou PENDENTE e confirma. A tela envia
+   novamente o XML original e a confirmacao ao backend. Reenviar permite que
+   o servidor valide e extraia os dados de novo em vez de confiar em valores
+   alteraveis enviados pelo browser.
+7. O backend repete validacao, verifica duplicidade e confere o documento do
+   prestador com o MEI escolhido. Em uma transacao, cria o Lancamento com
+   notaFiscalEmitida=true e cria o registro DocumentoFiscalImportado.
+8. A tela fecha o modal, mostra confirmacao e recarrega a listagem/paginacao.
+   Em caso de falha, preserva a previa e apresenta mensagem acionavel.
+
+Contrato HTTP sugerido
+---------------------
+Previa (sem persistir):
+  POST /api/v1/lancamentos/importacoes/nfse/previa
+  Content-Type: multipart/form-data
+  Parts: arquivo (XML), clienteId (UUID opcional para comparar o emitente)
+  Resposta: NfseImportacaoPreviaResponse
+
+Confirmacao (persiste apos validacao repetida):
+  POST /api/v1/lancamentos/importacoes/nfse/confirmar
+  Content-Type: multipart/form-data
+  Parts: arquivo (XML), clienteId (UUID), statusRecebimento (PAGO/PENDENTE)
+  Resposta: LancamentoResponse mais identificacao fiscal importada
+
+O contrato final pode mudar para um token de previa com validade curta, mas
+isso exige armazenar estado temporario no servidor. Reenviar e reprocessar o
+arquivo e mais simples para a primeira entrega. Em qualquer alternativa, o
+backend deve recalcular os valores do XML durante a confirmacao.
+
+Erros HTTP recomendados:
+  400 - XML malformado, raiz/versao nao suportada, XSD invalido, campo fiscal
+        obrigatorio ausente, documento cancelado ou emitente incompatível.
+  401/403 - usuario sem autenticacao/permissao.
+  409 - documento ja importado.
+  413 - arquivo excede limite de tamanho.
+  415 - formato de arquivo nao suportado.
+
+DTOs sugeridos
+--------------
+NfseImportacaoPreviaResponse:
+  tipoDocumento, versaoLeiaute, identificadorFiscal, numero, serie (se houver),
+  dataEmissao, competencia, situacaoDocumento, emitente { documento, nome },
+  tomador { documento, nome }, descricaoServico, valorServicoBruto,
+  valorLiquido, totalRetencoes, clienteSugeridoId, clienteSugeridoNome,
+  divergencias[], avisos[], duplicada.
+
+ConfirmacaoImportacaoNfseRequest (se nao for multipart):
+  clienteId e statusRecebimento. Valores fiscais nao devem vir do browser como
+  fonte confiavel; o backend os le novamente do XML.
+
+Mapeamento do XML para o lancamento
+-----------------------------------
+Os caminhos abaixo referem-se ao leiaute nacional atual. Na implementacao,
+confirmar cada caminho no XSD de producao da versao suportada. O parser deve
+ser namespace-aware; nao depender de prefixos ou de uma busca textual por tag.
+
+Campo do dominio            Origem XML candidata / regra
+--------------------------  -----------------------------------------------
+tipo do documento           NFSe (documento nacional de servico)
+identificador fiscal        NFSe/infNFSe/@Id e/ou identificador oficial
+numero                      NFSe/infNFSe/nNFSe
+serie                       DPS/infDPS/serie, se presente e aplicavel
+documento do prestador      NFSe/infNFSe/DPS/infDPS/prest/CNPJ ou /CPF
+nome do prestador           NFSe/infNFSe/DPS/infDPS/prest/xNome
+documento do tomador        NFSe/infNFSe/DPS/infDPS/toma/CNPJ ou /CPF
+nome do tomador             NFSe/infNFSe/DPS/infDPS/toma/xNome
+data de emissao da DPS      NFSe/infNFSe/DPS/infDPS/dhEmi
+competencia do servico      NFSe/infNFSe/DPS/infDPS/dCompet
+descricao do servico       NFSe/infNFSe/DPS/infDPS/serv/cServ/xDescServ
+valor bruto do servico     NFSe/infNFSe/DPS/infDPS/valores/vServPrest/vServ
+valor liquido da NFS-e     NFSe/infNFSe/valores/vLiq
+retencoes                   NFSe/infNFSe/valores/vTotalRet, se presente
+notaFiscalEmitida           true apos validacao da NFS-e importada
+statusRecebimento           escolha explicita do usuario; nunca inferir do XML
+idCliente                   MEI escolhido; verificar emitente contra cadastro
+
+Decisoes de valor:
+  - O dashboard chama faturamento ao total de lancamentos por competencia. Para
+    preservar essa semantica, a recomendacao e mapear valor para vServ (valor
+    bruto do servico) e guardar vLiq separadamente como metadado fiscal.
+  - Mostrar bruto e liquido na previa para o usuario conferir. Nao somar ISS,
+    IBS/CBS, descontos ou retencoes ao total bruto.
+  - Se o negocio preferir faturamento liquido, essa decisao muda o indicador;
+    precisa ser definida antes de implementar e documentada no dashboard.
+  - dCompet e competencia do servico; nao substituir automaticamente por dhEmi.
+  - xDescServ pode exceder os 200 caracteres permitidos hoje em Lancamento.
+    Preservar a descricao integral no documento fiscal e, se necessario,
+    guardar uma descricao resumida no Lancamento com indicacao de truncamento.
+
+Metodos/classes sugeridos no backend
+------------------------------------
+NfseImportacaoController:
+  previa(MultipartFile arquivo, UUID clienteId)
+  confirmar(MultipartFile arquivo, UUID clienteId, String statusRecebimento)
+
+NfseImportacaoService:
+  criarPrevia(byte[] xml, UUID clienteId)
+  confirmarImportacao(byte[] xml, UUID clienteId, StatusRecebimento status)
+  validarPrestadorContraCliente(DadosNfse dados, Cliente cliente)
+  verificarDuplicidade(String identificador, String hashXml)
+  salvarLancamentoEDocumento(DadosNfse dados, Cliente cliente, StatusRecebimento status)
+
+NfseXmlParser / NfseNacionalXmlParser:
+  suporta(documentoRaiz, namespace, versao)
+  validarXsd(byte[] xml, versao)
+  parsear(byte[] xml) -> DadosNfse normalizados
+  extrairIdentificador, numero, emitente, tomador, competencia, descricao,
+  valores e situacao do documento.
+
+LancamentoController e LancamentoService atuais podem continuar responsaveis
+pelas operacoes manuais. A importacao merece um fluxo separado para manter as
+validacoes fiscais e a verificacao de duplicidade fora do CRUD generico.
+
+Validacao e seguranca do XML
+----------------------------
+1. Definir limite de tamanho (por exemplo, 5 MB na primeira versao) e validar
+   tambem o tamanho real em bytes. Nao confiar no nome/MIME enviado pelo cliente.
+2. Usar parser XML com namespace awareness e com DTD, entidades externas,
+   XInclude e acesso externo a schema desativados (protecao contra XXE/SSRF).
+3. Validar estrutura com os XSD oficiais de producao instalados no classpath e
+   versionados. Nunca baixar schemas automaticamente durante uma requisicao.
+4. Conferir raiz, namespace, versao, assinatura/situacao disponivel e campos
+   minimos antes de oferecer confirmacao. XSD valido, isoladamente, nao prova
+   que o arquivo e autentico ou que a nota permanece nao cancelada.
+5. Nao registrar XML bruto, CPF/CNPJ completo ou dados do tomador nos logs.
+6. Limpar arquivos temporarios imediatamente; limitar tentativas e proteger a
+   rota com a mesma autenticacao da API.
+7. Tratar separadamente NFS-e autorizada, DPS, evento de cancelamento e evento
+   de substituicao. Nao aceitar qualquer XML que apenas tenha tags parecidas.
+
+Modelo de dados e migration
+---------------------------
+Adicionar uma entidade DocumentoFiscalImportado ligada ao Lancamento, com:
+  - id, lancamento_id, tipo_documento (NFS_E_NACIONAL), versao_leiaute
+  - identificador_fiscal (por exemplo, Id oficial), numero, serie opcional
+  - emitente_documento, emitente_nome, tomador_documento/nome opcionais
+  - data_emissao, competencia, valor_bruto, valor_liquido e total_retencoes
+  - sha256_xml, data_importacao e usuario_importador
+
+Criar migration Flyway para a tabela e indices. Aplicar restricao unica no
+identificador fiscal quando existir; tambem indexar sha256_xml. A verificacao
+de duplicidade precisa ocorrer no servico e ser garantida pelo banco para
+resistir a duas importacoes simultaneas. A gravacao do Lancamento e do documento
+deve estar na mesma transacao.
+
+Adicionar ao cadastro Cliente uma identificacao fiscal adequada (tipo e numero
+ou campos CPF/CNPJ). O campo atual cpf nao deve ser reaproveitado com semantica
+de CNPJ, ainda que o tamanho atual pareca caber. Criar migration com valor
+nullable e backfill apenas quando a origem for confiavel. A selecao manual do
+MEI continua necessaria quando o emitente nao puder ser conciliado.
+
+Mudancas no frontend Angular
+----------------------------
+1. Na listagem de Lancamentos, incluir acao "Importar NFS-e XML" ao lado de
+   "Novo lancamento". Desabilitar quando nao houver MEI selecionado.
+2. Modal acessivel com seletor de arquivo, nome/tamanho, instrucoes de formato,
+   estados de carregamento, erro, sucesso e cancelamento.
+3. Enviar o arquivo a rota de previa e mostrar: numero/ID, emitente, tomador,
+   competencia, data de emissao, descricao, bruto, liquido, status fiscal,
+   MEI escolhido e avisos de conciliacao/duplicidade.
+4. Permitir confirmar PAGO/PENDENTE explicitamente. Nao alterar o valor/data
+   fiscal do XML silenciosamente; divergencias devem ser destacadas.
+5. Confirmar, mostrar resultado, fechar modal e recarregar a pagina atual.
+6. Usar mensagens especificas para XML malformado, versao nao suportada,
+   emitente diferente, nota duplicada/cancelada e campo ausente.
+7. Usar BigDecimal no backend; no frontend, apresentar valores em pt-BR sem
+   converter dinheiro para ponto flutuante como fonte de persistencia.
+
+Plano de testes QA
+------------------
+Criar fixtures XML ficticias, sem dados pessoais reais, para:
+  - NFS-e valida, namespace padrao e campos opcionais presentes/ausentes;
+  - competencia diferente da data de emissao;
+  - bruto diferente do liquido por retencoes/descontos;
+  - XML malformado, vazio, muito grande, extensao enganosa e root DPS;
+  - namespace/versao nao suportada e XSD invalido;
+  - emitente sem correspondencia, correspondencia unica e divergencia com MEI;
+  - XML duplicado e duas confirmacoes concorrentes;
+  - documento cancelado/substituido ou evento recebido em vez de NFSe;
+  - tentativa XXE sem leitura de arquivo nem requisicao externa;
+  - falha de banco entre criacao do lancamento e metadado: nao deixar registro
+    parcial.
+
+Testes unitarios para parser, validadores e mapeamento; testes de integracao
+para multipart, autenticacao, persistencia atomica e unicidade; testes Angular
+para selecao, previa, confirmacao, loading, erros e recarregamento da lista.
+
+Evolucao futura
+---------------
+Fase 1 - NFS-e Nacional autorizada: previa, confirmacao, metadados, duplicidade,
+         validacao de leiaute e conciliacao do prestador.
+Fase 2 - Cancelamento/substituicao: importar e vincular eventos, atualizar
+         situacao do documento e decidir como reverter/retificar o lancamento.
+Fase 3 - Variantes municipais antigas: um parser/adaptador por leiaute e versao,
+         habilitado somente com fixture e XSD correspondente.
+Fase 4 - NF-e de mercadorias: parser especifico para nfeProc/NFe/infNFe, itens,
+         produtos, destinatario e total da NF-e. Nao misturar suas regras com
+         a NFS-e.
+Fase 5 - Itens fiscais: tabela DocumentoFiscalItem se for necessario detalhar
+         varios servicos/produtos por nota; a nota deve continuar sendo a unidade
+         de deduplicacao e auditoria.
+Fase 6 - Consulta automatica a portais/APIs, eventos, certificados ou busca por
+         chave: projeto separado, com autenticacao, autorizacao e regras oficiais.
+Fase 7 - Atualizacao de schemas: acompanhar comunicados oficiais e incluir cada
+         nova versao com testes de compatibilidade antes de ativa-la.
+
+Fora do escopo da primeira entrega
+----------------------------------
+  - Emitir uma nota ou gerar DPS.
+  - Consultar SEFAZ/ADN automaticamente.
+  - Importar ZIP/lote de XML, PDF ou foto.
+  - Suportar todos os provedores municipais por heuristica.
+  - Concluir pagamento, escrituracao tributaria ou calculo de impostos a partir
+    do XML.
+
+Fontes tecnicas oficiais para validar durante a implementacao
+------------------------------------------------------------
+Portal NFS-e - Documentacao atual de producao (manuais, XSD e anexos):
+https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/documentacao-atual
+
+Portal NFS-e - Manual integrado do Sistema Nacional:
+https://www.gov.br/nfse/pt-br/biblioteca/manuais-e-tutoriais/manual-integrado-nfse
+
+Portal NF-e - Manual de Orientacao do Contribuinte e leiaute NF-e/NFC-e:
+https://www.nfe.fazenda.gov.br/portal/listaConteudo.aspx?tipoConteudo=ndIjl%2BiEFdE%3D
+
+Observacao: o leiaute fiscal e versionado. Antes de implementar o parser, baixar
+os XSD da documentacao de producao vigente e fixar a versao suportada. Os nomes
+de tags listados neste plano sao um mapa inicial para NFS-e Nacional; o XSD
+oficial da versao aceita e a fonte final para obrigatoriedade e tipos.

@@ -16,12 +16,12 @@ public interface ClienteRepository extends JpaRepository<Cliente, UUID> {
 
 	    @Query("""
 		    select c from Cliente c
-		    where (:busca is null or lower(c.nome) like lower(concat('%', :busca, '%'))
-			or lower(coalesce(c.email, '')) like lower(concat('%', :busca, '%'))
-			or coalesce(c.cpf, '') like concat('%', :busca, '%'))
+		    where (cast(:busca as string) is null or lower(c.nome) like lower(concat('%', cast(:busca as string), '%'))
+			or lower(coalesce(c.email, '')) like lower(concat('%', cast(:busca as string), '%'))
+			or coalesce(c.cpf, '') like concat('%', cast(:busca as string), '%'))
 		      and (:ativo is null or c.ativo = :ativo)
-		      and (:cidade is null or lower(coalesce(c.cidade, '')) like lower(concat('%', :cidade, '%')))
-		      and (:estado is null or upper(coalesce(c.estado, '')) = upper(:estado))
+		      and (cast(:cidade as string) is null or lower(coalesce(c.cidade, '')) like lower(concat('%', cast(:cidade as string), '%')))
+		      and (cast(:estado as string) is null or upper(coalesce(c.estado, '')) = upper(cast(:estado as string)))
 		    """)
 	    Page<Cliente> buscar(@Param("busca") String busca, @Param("ativo") Boolean ativo,
 				 @Param("cidade") String cidade, @Param("estado") String estado, Pageable pageable);

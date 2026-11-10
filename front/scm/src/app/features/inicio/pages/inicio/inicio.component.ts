@@ -62,11 +62,13 @@ export class InicioComponent {
 
   readonly limiteEmAlerta = computed(() => this.percentualLimite() >= 80);
   readonly maxMovimentoMensal = computed(() => Math.max(1, ...this.serie().flatMap(mes => [mes.recebido, mes.pendente])));
+  readonly maxFaturamentoMensal = computed(() => Math.max(1, ...this.serie().map(mes => mes.faturamento)));
   readonly mesesGrafico = computed(() => this.serie().map(mes => ({
     ...mes,
     rotulo: new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(Number(mes.competencia.slice(0, 4)), Number(mes.competencia.slice(5, 7)) - 1, 1)).replace('.', ''),
     recebidoPct: Math.round(mes.recebido / this.maxMovimentoMensal() * 100),
     pendentePct: Math.round(mes.pendente / this.maxMovimentoMensal() * 100),
+    faturamentoPct: Math.round(mes.faturamento / this.maxFaturamentoMensal() * 100),
   })));
   readonly mesesLimite = computed(() => {
     let acumulado = 0;

@@ -13,8 +13,8 @@ import java.util.UUID;
 public interface ServicoRepository extends JpaRepository<Servico, UUID> {
 		@Query("""
 						select s from Servico s
-						where (:busca is null or lower(s.nome) like lower(concat('%', :busca, '%'))
-								or lower(coalesce(s.descricao, '')) like lower(concat('%', :busca, '%')))
+						where (cast(:busca as string) is null or lower(s.nome) like lower(concat('%', cast(:busca as string), '%'))
+								or lower(coalesce(s.descricao, '')) like lower(concat('%', cast(:busca as string), '%')))
 							and (:ativo is null or s.ativo = :ativo)
 							and (:precoMin is null or s.precoBase >= :precoMin)
 							and (:precoMax is null or s.precoBase <= :precoMax)

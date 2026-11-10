@@ -37,6 +37,7 @@ h2 { font-size: 1.1rem; }
 .legend-pending, .das-pending { background: #f59e0b; }
 .legend-overdue, .das-overdue { background: var(--danger-color); }
 .bar-chart { display: grid; grid-template-columns: repeat(12, minmax(24px, 1fr)); gap: 5px; align-items: end; min-height: 174px; overflow-x: auto; border-bottom: 1px solid var(--border-color); padding: 12px 2px 0; }
+.bar-billing { background: var(--primary-color); }
 .bar-month, .das-month { display: grid; grid-template-rows: 130px auto; justify-items: center; gap: 7px; min-width: 24px; }
 .bar-pair { display: flex; align-items: end; justify-content: center; gap: 3px; width: 100%; height: 130px; border-bottom: 1px solid var(--border-color); }
 .bar-pair span { width: min(11px, 34%); min-height: 0; border-radius: 3px 3px 0 0; }

@@ -23,7 +23,7 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, UUID> {
         @Query("""
                         select l from Lancamento l
                         where l.cliente.id = :clienteId
-                            and (:busca is null or lower(l.descricao) like lower(concat('%', :busca, '%')))
+                            and (cast(:busca as string) is null or lower(l.descricao) like lower(concat('%', cast(:busca as string), '%')))
                             and (:status is null or l.statusRecebimento = :status)
                             and (:notaFiscalEmitida is null or l.notaFiscalEmitida = :notaFiscalEmitida)
                         """)

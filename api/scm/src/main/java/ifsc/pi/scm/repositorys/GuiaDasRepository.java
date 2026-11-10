@@ -26,14 +26,14 @@ public interface GuiaDasRepository extends JpaRepository<GuiaDas, UUID> {
     Optional<GuiaDas> findFirstByCliente_IdAndStatusNotOrderByVencimentoAsc(UUID clienteId, String status);
 
     @Query(value = """
-            select competencia as competencia,
+            select periodo_apuracao as competencia,
                    count(*) filter (where status = 'PAGO') as pagas,
                    count(*) filter (where status <> 'PAGO' and data_vencimento >= :hoje) as pendentes,
                    count(*) filter (where status <> 'PAGO' and data_vencimento < :hoje) as vencidas
             from guia_das
-            where id_cliente = :clienteId and competencia between :inicio and :fim
-            group by competencia
-            order by competencia
+            where id_cliente = :clienteId and periodo_apuracao between :inicio and :fim
+            group by periodo_apuracao
+            order by periodo_apuracao
             """, nativeQuery = true)
     List<SerieMensalProjection> serieMensal(@Param("clienteId") UUID clienteId,
                                             @Param("inicio") String inicio,

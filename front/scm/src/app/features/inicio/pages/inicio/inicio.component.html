@@ -6,7 +6,7 @@
       <p class="subtitle">Acompanhe recebimentos, obrigações e o limite anual do MEI.</p>
     </div>
     <div class="heading-actions">
-      <app-mei-selector class="mei-picker" label="MEI selecionado" [placeholder]="carregandoClientes() ? 'Carregando clientes...' : 'Digite para buscar cliente'" [options]="clientes()" [selectedId]="clienteId()" [disabled]="carregandoClientes()" (selectionChange)="selecionarCliente($event)"></app-mei-selector>
+      <app-mei-selector class="mei-picker" label="MEI selecionado" [placeholder]="carregandoClientes() ? 'Carregando...' : 'Buscar cliente...'" [options]="clientes()" [selectedId]="clienteId()" [disabled]="carregandoClientes()" (selectionChange)="selecionarCliente($event)"></app-mei-selector>
       @if (clienteId()) { <a class="primary-action" routerLink="/lancamentos" [queryParams]="{ clienteId: clienteId() }">Novo lançamento</a> }
     </div>
   </header>
@@ -41,6 +41,20 @@
         }
       </div>
       <p class="chart-description">Cada par compara o total recebido com o que ainda está pendente na competência.</p>
+    </article>
+
+    <article class="panel chart-card">
+      <div class="panel-heading"><div><p class="eyebrow">Faturamento</p><h2>Faturamento por mês</h2></div><span class="chart-period">12 meses</span></div>
+      <div class="chart-legend"><span><i class="legend-billing"></i>Faturado</span></div>
+      <div class="bar-chart" role="img" aria-label="Faturamento total por competência nos últimos 12 meses">
+        @for (mes of mesesGrafico(); track mes.competencia) {
+          <div class="bar-month" [attr.title]="mes.competencia + ': ' + moeda.format(mes.faturamento)" [attr.aria-label]="mes.competencia + ': ' + moeda.format(mes.faturamento)">
+            <div class="bar-pair"><span class="bar-billing" [style.height.%]="mes.faturamentoPct"></span></div>
+            <span class="month-label">{{ mes.rotulo }}</span>
+          </div>
+        }
+      </div>
+      <p class="chart-description">Total de lançamentos registrados em cada competência para o MEI selecionado.</p>
     </article>
 
     <article class="panel chart-card">
