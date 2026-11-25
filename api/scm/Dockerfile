@@ -1,14 +1,11 @@
-# Estágio de Build e Runtime Java
-FROM eclipse-temurin:17-jdk-alpine
-LABEL authors="gabriel"
+﻿FROM maven:3.9-eclipse-temurin-17-alpine AS build
+WORKDIR /workspace
+COPY pom.xml .
+COPY src ./src
+RUN mvn -B -DskipTests package
 
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-
-# Copia o arquivo .jar gerado no build para dentro do container
-COPY target/*.jar app.jar
-
-# Define a porta padrão exposta
+COPY --from=build /workspace/target/scm-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8081
-
-# Executa a aplicação Spring Boot
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
